@@ -25,18 +25,63 @@ Before initiating the publication process, ensure the `package.json` is correctl
 To ensure a professional and reliable release, implement these automation best practices:
 
 - **`files` vs `.npmignore**`: Always prefer the `"files"`property in`package.json`. It acts as a whitelist, which is safer and more maintainable than trying to exclude files manually.
+
 - **Automated Builds**: Add a `prepublishOnly` script. This ensures that your code is always re-built (e.g., via `tsdown` or `tsc`) immediately before the registry upload, preventing the publication of outdated artifacts.
 
 ```json
 "scripts": {
   "prepublishOnly": "pnpm run build"
 }
-
 ```
 
 - **Documentation**: Ensure your `README.md` is detailed. The NPM registry uses this file as your package's landing page. It should clearly explain installation and how to create the `cplint.config.ts` file.
 
----
+- **Local CLI Development**: To test the CLI locally without publishing to npm, use `npm link`.
+
+```bash
+# Inside the CPLint project root:
+npm link
+```
+
+This creates a global symlink for the CLI command defined in `package.json`.
+
+```json
+"bin": {
+  "cplint": "./dist/main.js"
+}
+```
+
+After linking, the command becomes available globally and now can be tested the CLI inside any local project:
+
+```bash
+cplint generate-context
+```
+
+Rebuilding during development whenever the source changes, rebuild the project:
+
+```bash
+npm run build
+# Since the command is symlinked, the global CLI automatically uses the updated build.
+```
+
+To remove the global symlink:
+
+```bash
+# Inside the CPLint project root
+npm unlink
+```
+
+If the command is still available globally, remove it explicitly:
+
+```bash
+npm unlink -g cplint
+```
+
+To link again later:
+
+```bash
+npm link
+```
 
 ## Version Management (SemVer)
 

@@ -1,15 +1,7 @@
 #!/usr/bin/env node
 
-import { Command } from "commander";
+import { createProgram } from "./cli/create-program.js";
 
-import { generateCommand } from "./generate-context/cli.js";
-
-const program = new Command();
-
-program
-  .name("cplint")
-  .description("Consumer Oriented Programming Context Tooling");
-
-program.addCommand(generateCommand);
+const program = createProgram();
 
 program.parse();

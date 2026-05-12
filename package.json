@@ -1,10 +1,22 @@
 {
   "name": "cplint",
   "version": "0.0.0",
-  "description": "",
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Allan Foppa Fagundes <allanfoppa.dev@gmail.com>",
+  "description": "AST-based semantic linting and context optimization tooling for AI-assisted development.",
+  "keywords": [
+    "ast",
+    "typescript",
+    "semantic-analysis",
+    "llm",
+    "ai",
+    "context-engineering",
+    "token-optimization",
+    "vertical-slice",
+    "architecture",
+    "co-location",
+    "developer-tools"
+  ],
+  "license": "MIT",
   "type": "module",
   "bin": {
     "cplint": "./dist/main.js"
