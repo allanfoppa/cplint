@@ -12,6 +12,7 @@ export function createProgram() {
     );
 
   program.helpCommand(true);
+
   program.addCommand(contextCommand);
 
   return program;

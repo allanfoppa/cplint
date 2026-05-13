@@ -1,6 +1,7 @@
 import path from "node:path";
 
 import { loadConfig } from "../../config/load-config.js";
+import { semanticContextGenerator } from "../../core/semantic-engine/build-context.js";
 
 type GenerateContextOptions = {
   entrypoint: string[];
@@ -16,7 +17,7 @@ export async function generateContext(options: GenerateContextOptions) {
   console.log("\nEntrypoints:\n");
 
   for (const entrypoint of resolvedEntrypoints) {
-    // TODO: Implement actual context generation logic here
+    await semanticContextGenerator(entrypoint);
     console.log(entrypoint);
   }
 }
