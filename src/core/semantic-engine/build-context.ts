@@ -14,10 +14,11 @@ import { extractStateShape } from "./extractors/extract-state-shape.js";
 import { extractCriticalFlow } from "./extractors/extract-critical-flow.js";
 import { extractChangeChecklist } from "./extractors/extract-change-checlist.js";
 import { extractManualBlocks } from "./extractors/extract-manual-blocks.js";
+import { extractMetrics } from "./extractors/extract-metrics.js";
 
 export async function semanticContextGenerator(entrypoint: string) {
   if (!entrypoint) {
-    throw new Error("Usage: cplint context --entrypoint <entry-file>");
+    throw new Error("Usage: cplint generate-context --entrypoint <entry-file>");
   }
 
   const config: Config = DEFAULT_CONFIG;
@@ -69,7 +70,7 @@ function buildContext({
 }): SemanticContext {
   const exported = sourceFile.getExportedDeclarations();
 
-  return {
+  const baseContext = {
     title: humanizeTitle(sourceFile),
     meta: {
       generated: new Date().toISOString().slice(0, 10),
@@ -82,6 +83,11 @@ function buildContext({
     stateShape: extractStateShape(sourceFile, exported, checker, config),
     criticalFlow: extractCriticalFlow(exported, checker, config),
     changeChecklist: extractChangeChecklist(sourceFile, exported, config),
+  };
+
+  return {
+    ...baseContext,
+    metrics: extractMetrics(baseContext),
   };
 }
 

@@ -24,8 +24,6 @@ export async function generateContext(options: GenerateContextOptions) {
 
 function resolveEntrypoint(rootPaths: string[], entrypoint: string) {
   const cwd = process.cwd();
-
   const root = rootPaths[0];
-
   return path.join(cwd, root, entrypoint);
 }

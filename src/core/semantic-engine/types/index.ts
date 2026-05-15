@@ -77,6 +77,7 @@ export type DependencyRow = {
   module: string;
   role: string;
   symbols: string[];
+  type: string;
 };
 
 export type StateField = {
@@ -88,6 +89,16 @@ export type StateShapeRow = {
   name: string;
   fields: StateField[];
 };
+
+export interface ContextMetrics {
+  entropy: number;
+  grade: "A" | "B" | "C" | "D" | "F";
+  signals: {
+    fragmentation: number;
+    flowComplexity: number;
+    externalLoad: number;
+  };
+}
 
 export type SemanticContext = {
   title: string;
@@ -102,6 +113,7 @@ export type SemanticContext = {
   stateShape: StateShapeRow[];
   criticalFlow: string[];
   changeChecklist: string[];
+  metrics: ContextMetrics;
 };
 
 export type ExportDeclRow = {

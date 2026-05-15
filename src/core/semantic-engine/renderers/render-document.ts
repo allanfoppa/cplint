@@ -4,6 +4,7 @@ import { shortType } from "../utils/short-type.js";
 import {
   ApiSurfaceRow,
   Config,
+  ContextMetrics,
   DependencyRow,
   EntryPoint,
   ManualBlocks,
@@ -36,6 +37,12 @@ export function renderDocument(
     renderAutoBlock("meta", renderMeta(context.meta)),
 
     renderManualBlock("meta", manual.meta),
+
+    "",
+
+    "## metrics",
+
+    renderAutoBlock("metrics", renderMetrics(context.metrics)),
 
     "",
 
@@ -74,7 +81,10 @@ export function renderDocument(
 
     "## critical-flow",
 
-    renderAutoBlock("critical-flow", renderCriticalFlow(context.criticalFlow)),
+    renderAutoBlock(
+      "critical-flow",
+      renderCriticalFlow(context.criticalFlow, config),
+    ),
 
     "",
 
@@ -131,6 +141,17 @@ function renderMeta(meta: SemanticContext["meta"]): string {
   ].join("\n");
 }
 
+function renderMetrics(metrics: ContextMetrics) {
+  const status = metrics.entropy > 7 ? "⚠️ HIGH ENTROPY" : "✅ HEALTHY";
+
+  return [
+    `Status: ${status}`,
+    `Score: ${metrics.entropy}/10 [Grade: ${metrics.grade}]`,
+    `Fragmentation: ${metrics.signals.fragmentation} local dependencies`,
+    `Flow Complexity: ${metrics.signals.flowComplexity} steps in critical path`,
+  ].join("\n");
+}
+
 function renderEntryPoints(rows: EntryPoint[]): string {
   if (!rows.length) return "- none";
 
@@ -153,10 +174,26 @@ function renderDeps(rows: DependencyRow[]): string {
     .join("\n");
 }
 
-function renderCriticalFlow(rows: string[]): string {
+function renderCriticalFlow(rows: string[], config: any): string {
   if (!rows.length) return "- none";
 
-  return rows.map((row) => `- ${row}`).join("\n");
+  if (!config.diagrams) {
+    return rows.map((row) => `- ${row}`).join("\n");
+  }
+
+  // Transforma "A -> B -> C" em um fluxograma Mermaid
+  const mermaidSteps = rows[0]
+    .split(" -> ")
+    .map((step, index) => `step${index}["${step}"]`)
+    .join(" --> ");
+
+  return [
+    `## critical-flow`,
+    "\`\`\`mermaid",
+    "graph TD",
+    `${mermaidSteps}`,
+    "\`\`\`",
+  ].join("\n");
 }
 
 function renderChecklist(rows: string[]): string {
