@@ -26,6 +26,7 @@
     "build": "tsdown",
     "test": "vitest",
     "start": "node dist/main.js",
+    "typecheck": "tsc --noEmit",
     "prepublishOnly": "pnpm run build"
   },
   "packageManager": "pnpm@11.0.9",

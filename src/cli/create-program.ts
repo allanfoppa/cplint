@@ -1,6 +1,7 @@
 import { Command } from "commander";
 
-import { contextCommand } from "./commands/context.command.js";
+import { contextCommand } from "./commands/generate-context.command.js";
+import { lintCommand } from "./commands/lint.command.js";
 
 export function createProgram() {
   const program = new Command();
@@ -14,6 +15,7 @@ export function createProgram() {
   program.helpCommand(true);
 
   program.addCommand(contextCommand);
+  program.addCommand(lintCommand);
 
   return program;
 }
