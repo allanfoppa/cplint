@@ -23,7 +23,7 @@
   },
   "scripts": {
     "dev": "tsx src/main.ts",
-    "build": "tsdown",
+    "build": "pnpm typecheck && tsdown",
     "test": "vitest",
     "start": "node dist/main.js",
     "typecheck": "tsc --noEmit",
