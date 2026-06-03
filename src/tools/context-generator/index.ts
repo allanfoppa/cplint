@@ -9,7 +9,7 @@ import {
   DEFAULT_CONFIG,
 } from "../../core/types/index.js";
 import { Project } from "ts-morph";
-import { buildContext } from "../../core/context-generator/pipeline/build-context.js";
+import { buildContext } from "../../core/context-generator/build-context.js";
 import { getOutputPath } from "../../core/utils/get-output-path.js";
 import { renderDocument } from "../../core/context-generator/renderers/render-document.js";
 import { resolveEntrypoint } from "../../core/utils/resolve-entrypoint.js";

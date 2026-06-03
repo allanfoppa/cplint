@@ -5,8 +5,16 @@ import type { CPLintAdapter } from "../core/types/index.js";
 import type { RulesConfig } from "../core/linter/types.js";
 
 export interface CPLintContextConfig {
+  /** Root path to analyze (e.g. ['src/app/features'])
+   * - The analyzer will recursively analyze all files under the specified paths.
+   */
   rootPath: string[];
+
+  /**
+   * Glob patterns to exclude from analysis (e.g. ['**\/node_modules\/**', '**\/*.spec.ts'])
+   */
   exclude?: string[];
+
   /**
    * Adapter to use for semantic analysis.
    * - String shorthand: 'angular' | 'react' | 'node'

@@ -16,10 +16,10 @@ export type LintRule = {
 };
 
 /**
- * Parsed representation of a .context.ai.md file passed to each rule.
+ * Parsed representation of a .context.ai.yaml file passed to each rule.
  */
 export type LintFile = {
-  /** Absolute path to the .context.ai.md file */
+  /** Absolute path to the .context.ai.yaml file */
   path: string;
   /** Raw markdown content */
   content: string;

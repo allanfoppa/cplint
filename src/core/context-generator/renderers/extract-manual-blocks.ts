@@ -1,21 +1,31 @@
 import type { ManualBlocks } from "../../types/index.js";
 
 /**
- * Extracts all MANUAL blocks from an existing .context.ai.md file.
- * AUTO blocks are intentionally ignored — they are always regenerated.
- *
- * The regex captures the block key and its trimmed content, preserving
- * any developer-written text between the START/END markers.
+ * Extracts all MANUAL blocks from an existing .context.ai.yaml file.
+ * Parsed by matching top-level properties indented under the 'manual:' block scope.
  */
-export function extractManualBlocks(markdown: string): ManualBlocks {
+export function extractManualBlocks(yamlContent: string): ManualBlocks {
   const blocks: ManualBlocks = {};
 
-  const regex =
-    /<!-- MANUAL:START ([a-z-]+) -->([\s\S]*?)<!-- MANUAL:END \1 -->/g;
+  // Locates the start index of the manual partition block
+  const manualSectionIndex = yamlContent.search(/^manual:\s*$/m);
+  if (manualSectionIndex === -1) return blocks;
 
-  for (const match of markdown.matchAll(regex)) {
+  // Isolates everything written below the 'manual:' key
+  const manualZone = yamlContent.substring(manualSectionIndex);
+
+  // Matches child keys (indented by 2 spaces) and grabs everything until the next key or file end
+  const blockRegex = /^  ([a-z-]+):\s*\n((?:^    .*\n?)*)/gm;
+
+  for (const match of manualZone.matchAll(blockRegex)) {
     const key = match[1];
-    const body = match[2].replace(/^\n/, "").replace(/\n\s*$/, "");
+    // Captures the block content and strips the baseline 4-space indentation used in the file layer
+    const body = match[2]
+      .split("\n")
+      .map((line) => line.substring(4))
+      .join("\n")
+      .trimEnd();
+
     blocks[key] = body;
   }
 

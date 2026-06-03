@@ -1,15 +1,18 @@
 export function renderAutoBlock(name: string, content: string): string {
-  return [
-    `<!-- AUTO:START ${name} -->`,
-    content,
-    `<!-- AUTO:END ${name} -->`,
-  ].join("\n");
+  // Ajusta o conteúdo interno para ficar indentado +2 espaços para dentro da chave filha
+  const indentedContent = content
+    .split("\n")
+    .map((line) => (line.trim() === "" ? "" : `  ${line}`))
+    .join("\n");
+
+  return `${name}:\n${indentedContent}`;
 }
 
 export function renderManualBlock(name: string, content: string): string {
-  return [
-    `<!-- MANUAL:START ${name} -->`,
-    content,
-    `<!-- MANUAL:END ${name} -->`,
-  ].join("\n");
+  const indentedContent = content
+    .split("\n")
+    .map((line) => (line.trim() === "" ? "" : `  ${line}`))
+    .join("\n");
+
+  return `${name}:\n${indentedContent}`;
 }

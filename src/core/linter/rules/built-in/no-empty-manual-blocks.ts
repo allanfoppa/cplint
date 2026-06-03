@@ -1,24 +1,17 @@
 import type { LintFile, LintRule, LintViolation } from "../../types.js";
 
-/**
- * Flags any MANUAL block whose content is blank or only contains the
- * default placeholder ("- ").
- *
- * Each block has its own severity so teams can decide which ones are
- * mandatory (error) vs optional (warn).
- */
-
 type BlockPolicy = {
   severity: "error" | "warn";
+  required: boolean;
 };
 
 const BLOCK_POLICIES: Record<string, BlockPolicy> = {
-  purpose: { severity: "error" },
-  decisions: { severity: "warn" },
-  constraints: { severity: "warn" },
-  "known-pitfalls": { severity: "warn" },
-  "not-in-scope": { severity: "warn" },
-  "open-questions": { severity: "warn" },
+  purpose: { severity: "error", required: true },
+  decisions: { severity: "warn", required: false },
+  constraints: { severity: "warn", required: false },
+  "known-pitfalls": { severity: "warn", required: false },
+  "not-in-scope": { severity: "warn", required: false },
+  "open-questions": { severity: "warn", required: false },
 };
 
 function isBlank(value: string): boolean {
@@ -27,7 +20,7 @@ function isBlank(value: string): boolean {
 
 export const noEmptyManualBlocks: LintRule = {
   name: "no-empty-manual-blocks",
-  severity: "warn", // overall rule severity; per-block overrides apply below
+  severity: "warn",
 
   run(file: LintFile): LintViolation[] {
     const violations: LintViolation[] = [];
@@ -35,26 +28,35 @@ export const noEmptyManualBlocks: LintRule = {
     for (const [block, policy] of Object.entries(BLOCK_POLICIES)) {
       const value = file.manualBlocks[block];
 
+      // Scenario: Not in context (undefined)
       if (value === undefined) {
-        violations.push({
-          rule: "no-empty-manual-blocks",
-          severity: policy.severity,
-          file: file.path,
-          block,
-          message: `MANUAL block "${block}" is missing. Re-run context-generate to restore it.`,
-        });
+        // Not in context and required? warn/error
+        if (policy.required) {
+          violations.push({
+            rule: "no-empty-manual-blocks",
+            severity: policy.severity,
+            file: file.path,
+            block,
+            message: `MANUAL block "${block}" is missing. It is mandatory for file context.`,
+          });
+        }
+        // Not in context and not required? ok (skip directly)
         continue;
       }
 
+      // Scenario: Is in context (value exists)
       if (isBlank(value)) {
+        // Is in context and empty? warn/error
         violations.push({
           rule: "no-empty-manual-blocks",
           severity: policy.severity,
           file: file.path,
           block,
-          message: `MANUAL block "${block}" is empty. Fill it in or document why it does not apply.`,
+          message: `MANUAL block "${block}" is empty. Fill it in or delete the key to save tokens if it doesn't apply.`,
         });
       }
+
+      // Is in context and filled? ok (falls through, continues the loop)
     }
 
     return violations;

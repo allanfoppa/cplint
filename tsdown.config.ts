@@ -5,12 +5,12 @@ export default defineConfig({
   format: "esm",
   outDir: "dist",
   clean: true,
-  fixedExtension: false, // Ensures output uses .js instead of .mjs
-
-  // Enable JavaScript source maps (.js.map)
+  fixedExtension: false,
+  platform: "node",
+  outputOptions: {
+    inlineDynamicImports: true,
+  },
   sourcemap: true,
-
-  // Enable Type Declaration source maps (.d.ts.map)
   dts: {
     sourcemap: true,
   },

@@ -2,13 +2,9 @@ import type { CPLintAdapter } from "../../core/types/index.js";
 
 const ADAPTER_MAP: Record<string, () => Promise<CPLintAdapter>> = {
   angular: () =>
-    import("../adapters/built-in/angular/index.js").then(
-      (m) => m.AngularAdapter,
-    ),
-  react: () =>
-    import("../adapters/built-in/react/index.js").then((m) => m.ReactAdapter),
-  node: () =>
-    import("../adapters/built-in/node/index.js").then((m) => m.NodeAdapter),
+    import("../adapters/angular/index.js").then((m) => m.AngularAdapter),
+  react: () => import("../adapters/react/index.js").then((m) => m.ReactAdapter),
+  node: () => import("../adapters/node/index.js").then((m) => m.NodeAdapter),
 };
 
 export async function resolveAdapter(
@@ -21,7 +17,7 @@ export async function resolveAdapter(
 
   // Default
   if (!adapter) {
-    const { NodeAdapter } = await import("../adapters/built-in/node/index.js");
+    const { NodeAdapter } = await import("../adapters/node/index.js");
     return NodeAdapter;
   }
 

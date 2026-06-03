@@ -1,21 +1,49 @@
 import { readFileSync } from "fs";
 import fg from "fast-glob";
+import YAML from "yaml";
 import type { LintFile, LintRule, LintViolation } from "../types.js";
 
 function parseContextFile(path: string, content: string): LintFile {
   const manualBlocks: Record<string, string> = {};
   const autoBlocks: Record<string, string> = {};
 
-  const manualRegex =
-    /<!-- MANUAL:START ([a-z-]+) -->([\s\S]*?)<!-- MANUAL:END \1 -->/g;
-  const autoRegex =
-    /<!-- AUTO:START ([a-z-]+) -->([\s\S]*?)<!-- AUTO:END \1 -->/g;
+  try {
+    const parsed = YAML.parse(content) as {
+      auto?: Record<string, unknown>;
+      manual?: Record<string, unknown>;
+    };
 
-  for (const match of content.matchAll(manualRegex)) {
-    manualBlocks[match[1]] = match[2].replace(/^\n/, "").replace(/\n\s*$/, "");
-  }
-  for (const match of content.matchAll(autoRegex)) {
-    autoBlocks[match[1]] = match[2].replace(/^\n/, "").replace(/\n\s*$/, "");
+    if (parsed && typeof parsed.auto === "object") {
+      for (const [key, value] of Object.entries(parsed.auto)) {
+        autoBlocks[key] =
+          typeof value === "object"
+            ? YAML.stringify(value).trim()
+            : String(value ?? "");
+      }
+    }
+
+    if (parsed && typeof parsed.manual === "object") {
+      for (const [key, value] of Object.entries(parsed.manual)) {
+        if (value === null || value === undefined) {
+          manualBlocks[key] = "-";
+        } else if (
+          Array.isArray(value) &&
+          (value.length === 0 || value[0] === null)
+        ) {
+          manualBlocks[key] = "-";
+        } else {
+          manualBlocks[key] =
+            typeof value === "object"
+              ? YAML.stringify(value).trim()
+              : String(value);
+        }
+      }
+    }
+  } catch (error) {
+    console.error(
+      `[CPLint] Failed to parse valid YAML at: ${path}. Skipping blocks mapping.`,
+      error,
+    );
   }
 
   return { path, content, manualBlocks, autoBlocks };
@@ -29,7 +57,9 @@ export type LintRunnerOptions = {
 };
 
 export function runLintRunner(options: LintRunnerOptions): LintViolation[] {
-  const patterns = options.rootPath.map((root) => `${root}/**/*.context.ai.md`);
+  const patterns = options.rootPath.map(
+    (root) => `${root}/**/*.context.ai.yaml`,
+  );
 
   const files = patterns.flatMap((pattern) =>
     fg.sync(pattern, { ignore: options.exclude }),

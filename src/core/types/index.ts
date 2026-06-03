@@ -36,15 +36,19 @@ export interface CPLintAdapter {
   ): ExtractedContext;
 }
 
-export type ManualDefaults = {
-  meta: string;
-  purpose: string;
-  decisions: string;
-  constraints: string;
-  "known-pitfalls": string;
-  "not-in-scope": string;
-  "open-questions": string;
-};
+export type ManualBlockKey =
+  | "purpose"
+  | "decisions"
+  | "constraints"
+  | "known-pitfalls"
+  | "not-in-scope"
+  | "open-questions";
+
+export type ManualDefaults = Record<ManualBlockKey, string>;
+
+export type ManualBlocks = {
+  [key in ManualBlockKey]?: string;
+} & Record<string, string | undefined>;
 
 export type ClassifierRule = {
   name?: string;
@@ -79,13 +83,12 @@ export type Config = {
 
 export const DEFAULT_CONFIG: Config = {
   tsConfigFilePath: "tsconfig.json",
-  outputFileName: "{base}.context.ai.md",
+  outputFileName: "{base}.context.ai.yaml",
   includePrivateTypes: false,
   maxTypeFields: 12,
   maxFlowSteps: 8,
   maxReferenceFiles: 8,
   manualDefaults: {
-    meta: ["status: in-progress", "owner: [team-or-person]"].join("\n"),
     purpose: "- ",
     decisions: "- ",
     constraints: "- ",
@@ -161,5 +164,3 @@ export type ExportDeclRow = {
   exportName: string;
   decl: MorphNode;
 };
-
-export type ManualBlocks = Record<string, string>;
