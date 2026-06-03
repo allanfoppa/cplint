@@ -1,6 +1,6 @@
 {
   "name": "cplint",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "author": "Allan Foppa Fagundes <allanfoppa.dev@gmail.com>",
   "description": "AST-based semantic linting and context optimization tooling for AI-assisted development.",
   "keywords": [
