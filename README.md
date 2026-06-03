@@ -2,11 +2,14 @@
 
 [![npm version](https://img.shields.io/npm/v/cplint.svg?style=flat-square)](https://www.npmjs.com/package/cplint)
 [![npm downloads](https://img.shields.io/npm/dm/cplint.svg?style=flat-square)](https://www.npmjs.com/package/cplint)
+[![Status: Beta](https://img.shields.io/badge/status-beta-orange.svg?style=flat-square)](#)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 
 CPLint is a specialized, AST-powered context generator and structural YAML linter designed to feed Large Language Models (like Cursor, Copilot, or custom agents) with highly optimized repository metadata. It reduces LLM token consumption by executing static AST analysis (via `ts-morph`), stripping redundant ecosystem boilerplate, and outputting highly structured `*.context.ai.yaml` files.
 
 **Inspired by the philosophy and structure of ESLint**, CPLint brings predictable, configuration-driven linting rules to AI context orchestration—ensuring developers document core business rules before sending prompts to the LLM.
+
+> ⚠️ **Disclaimer:** CPLint is currently in **Beta**. It is under active development, and breaking changes to the configuration schema may occur before the stable `1.0.0` release. Feel free to open issues or contribute!
 
 ---
 
