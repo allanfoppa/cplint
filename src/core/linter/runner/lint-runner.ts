@@ -23,7 +23,7 @@ function parseContextFile(path: string, content: string): LintFile {
 
 export type LintRunnerOptions = {
   rootPath: string[];
-  exclude: string[]; // was "ignore" — aligns with CPLintContextConfig
+  exclude: string[];
   rules: LintRule[];
   format: "stdout" | "json";
 };

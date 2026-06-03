@@ -35,7 +35,6 @@ export const noEmptyManualBlocks: LintRule = {
     for (const [block, policy] of Object.entries(BLOCK_POLICIES)) {
       const value = file.manualBlocks[block];
 
-      // Block missing entirely from the file (older generated file)
       if (value === undefined) {
         violations.push({
           rule: "no-empty-manual-blocks",
