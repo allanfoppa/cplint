@@ -1,30 +1,15 @@
 import type { ApiSurfaceRow } from "../types/index.js";
 
-/**
- * Builds an ApiSurfaceRow from the old `kind + type` shape that the
- * extractors were producing before the schema migration.
- *
- * This centralises the signature-building logic so each extractor
- * doesn't duplicate the formatting rules.
- *
- * Old extractor pattern:
- *   { name: "doThing", kind: "function", type: "string" }
- *
- * New shape:
- *   { name: "doThing", signature: "doThing() → string", flags: ["function", "exported"] }
- */
 export function buildApiRow(opts: {
   name: string;
   kind: string;
   type: string;
-  params?: string; // e.g. "title: string, id: number"
-  flags?: string[]; // extra flags beyond kind+exported
+  params?: string;
+  flags?: string[];
 }): ApiSurfaceRow {
   const { name, kind, type, params = "", flags = [] } = opts;
-
   const signature = buildSignature(name, kind, type, params);
   const allFlags = [kind, "exported", ...flags].filter(Boolean);
-
   return { name, signature, flags: allFlags };
 }
 
@@ -42,12 +27,26 @@ function buildSignature(
 
     case "component":
     case "page":
+      // Angular class: type === name (class name passed as type)
+      // React function: type is "JSX.Element" or params contains props
+      if (type === name || (!params && type !== "JSX.Element")) {
+        return name; // Angular — no call signature
+      }
       return params
         ? `${name}({ ${params} }) → JSX.Element`
         : `${name}() → JSX.Element`;
 
+    // Angular / Node class-based roles — no call signature
+    case "facade":
+    case "service":
+    case "guard":
+    case "store":
+    case "repository":
+    case "controller":
+    case "directive":
+    case "pipe":
     case "class":
-      return `class ${name}`;
+      return name;
 
     case "variable":
       return `${name}: ${type}`;
@@ -58,6 +57,9 @@ function buildSignature(
 
     case "enum":
       return `enum ${name}`;
+
+    case "routes":
+      return `${name}: ${type}`;
 
     default:
       return params ? `${name}(${params}) → ${type}` : `${name}: ${type}`;

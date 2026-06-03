@@ -7,37 +7,38 @@ export function renderCriticalFlow(rows: string[], config: Config): string {
     return rows.map((row) => `- ${row}`).join("\n");
   }
 
-  // Each row is expected to be a "A -> B -> C" string.
-  // Build one mermaid node per unique step across all rows.
-  const nodeIds = new Map<string, string>();
-  let nodeCounter = 0;
-
-  const getId = (label: string): string => {
-    if (!nodeIds.has(label)) {
-      nodeIds.set(label, `step${nodeCounter++}`);
-    }
-    return nodeIds.get(label)!;
-  };
-
+  // Each row is a "A -> B -> C" flow (one per method or function).
+  // Nodes are scoped per-row with a row prefix to prevent cross-row
+  // label collisions (e.g. `lastValueFrom` appearing in multiple methods
+  // would create a shared hub node with incorrect cross-method edges).
+  const nodeDefs: string[] = [];
   const edges: string[] = [];
+  let globalCounter = 0;
 
-  for (const row of rows) {
-    const steps = row
+  for (let rowIdx = 0; rowIdx < rows.length; rowIdx++) {
+    const steps = rows[rowIdx]
       .split(" -> ")
       .map((s) => s.trim())
       .filter(Boolean);
-    for (let i = 0; i < steps.length - 1; i++) {
-      const from = getId(steps[i]);
-      const to = getId(steps[i + 1]);
-      edges.push(`  ${from} --> ${to}`);
+
+    if (steps.length < 2) continue;
+
+    // Each step in this row gets its own unique node id
+    const rowNodeIds: string[] = [];
+    for (const label of steps) {
+      const id = `step${globalCounter++}`;
+      rowNodeIds.push(id);
+      // Escape double quotes inside labels
+      const safeLabel = label.replace(/"/g, "'");
+      nodeDefs.push(`  ${id}["${safeLabel}"]`);
+    }
+
+    for (let i = 0; i < rowNodeIds.length - 1; i++) {
+      edges.push(`  ${rowNodeIds[i]} --> ${rowNodeIds[i + 1]}`);
     }
   }
 
-  const nodeDefs = Array.from(nodeIds.entries()).map(
-    ([label, id]) => `  ${id}["${label}"]`,
-  );
+  if (!nodeDefs.length) return "- none";
 
-  // Note: the "## critical-flow" heading is rendered by render-document,
-  // not here — this function returns only the block content.
   return ["```mermaid", "graph TD", ...nodeDefs, ...edges, "```"].join("\n");
 }

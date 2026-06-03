@@ -8,6 +8,8 @@ import type {
 import type { FileRole, StateShapeRow } from "../types/index.js";
 import { shortType } from "./short-type.js";
 
+// ─── addTypeSummary ───────────────────────────────────────────────────────────
+
 export function addTypeSummary(
   found: Map<string, StateShapeRow>,
   name: string,
@@ -27,17 +29,48 @@ export function addTypeSummary(
   found.set(name, { name, fields });
 }
 
+// ─── buildSummary ─────────────────────────────────────────────────────────────
+
 export function buildSummary(
   sourceFile: SourceFile,
   role: FileRole,
   _checker: TypeChecker,
 ): string {
-  const hasJSX =
-    sourceFile.getDescendantsOfKind(SyntaxKind.JsxElement).length > 0 ||
-    sourceFile.getDescendantsOfKind(SyntaxKind.JsxSelfClosingElement).length >
-      0;
+  // ── Store: class-based OR functional (NgRx SignalStore, Zustand…) ────────
+  // Must come before isClassRole check because "store" was incorrectly
+  // included in CLASS_ROLES — functional stores have no exported class.
+  if (role === "store") {
+    const cls = sourceFile.getClasses().find((c) => c.isExported());
+    if (cls) {
+      const stateCount = cls
+        .getProperties()
+        .filter((p) => !p.hasModifier(SyntaxKind.PrivateKeyword)).length;
+      return `Exported store class. Manages ${stateCount} state field(s).`;
+    }
+    return buildFunctionalStoreSummary(sourceFile);
+  }
 
+  // ── Angular / Node class-based roles ────────────────────────────────────
+  if (isClassRole(role)) {
+    const cls = sourceFile.getClasses().find((c) => c.isExported());
+    if (cls) {
+      const publicMethods = cls
+        .getMethods()
+        .filter((m) => m.getScope() === undefined || m.getScope() === "public");
+      return `Exported ${roleLabel(role)}. ${cls.getName() ?? role} with ${publicMethods.length} public method(s).`;
+    }
+    return `Exported ${roleLabel(role)}.`;
+  }
+
+  // ── Component / Page — Angular class or React function ───────────────────
   if (role === "component" || role === "page") {
+    const cls = sourceFile.getClasses().find((c) => c.isExported());
+    if (cls) {
+      const publicMethods = cls
+        .getMethods()
+        .filter((m) => m.getScope() === undefined || m.getScope() === "public");
+      return `Exported Angular ${role} class. ${cls.getName() ?? role} with ${publicMethods.length} public method(s).`;
+    }
     const fn = sourceFile.getFunctions().find((f) => f.isExported());
     if (fn) {
       const params = buildParamsSummary(fn);
@@ -46,6 +79,7 @@ export function buildSummary(
     return `Exported ${role}. Returns JSX.`;
   }
 
+  // ── Hook ────────────────────────────────────────────────────────────────
   if (role === "hook") {
     const fn = sourceFile
       .getFunctions()
@@ -58,37 +92,18 @@ export function buildSummary(
     return "Exported React hook.";
   }
 
-  if (["service", "facade", "repository", "controller"].includes(role)) {
-    const cls = sourceFile.getClasses().find((c) => c.isExported());
-    if (cls) {
-      const methodCount = cls
-        .getMethods()
-        .filter(
-          (m) => m.getScope() === undefined || m.getScope() === "public",
-        ).length;
-      return `Exported class. Provides ${cls.getName() ?? role} with ${methodCount} public method(s).`;
-    }
-  }
-
-  if (role === "store") {
-    const cls = sourceFile.getClasses().find((c) => c.isExported());
-    if (cls) {
-      const stateCount = cls
-        .getProperties()
-        .filter((p) => !p.hasModifier(SyntaxKind.PrivateKeyword)).length;
-      return `Exported store class. Manages ${stateCount} state field(s).`;
-    }
-    return "Exported store. Manages application state.";
-  }
-
+  // ── Model ────────────────────────────────────────────────────────────────
   if (role === "model") {
     const names = [
       ...sourceFile.getInterfaces().filter((i) => i.isExported()),
       ...sourceFile.getTypeAliases().filter((t) => t.isExported()),
     ].map((t) => `\`${t.getName()}\``);
-    return `Exports ${names.length} type definition(s): ${names.join(", ")}.`;
+    if (names.length) {
+      return `Exports ${names.length} type definition(s): ${names.join(", ")}.`;
+    }
   }
 
+  // ── Util ─────────────────────────────────────────────────────────────────
   if (role === "util") {
     const fns = sourceFile.getFunctions().filter((f) => f.isExported());
     if (fns.length === 1) {
@@ -97,30 +112,79 @@ export function buildSummary(
       return `Exported utility function. ${params}Returns \`${ret}\`.`;
     }
     if (fns.length > 1) {
-      return `Exports ${fns.length} utility functions: ${fns.map((f) => `\`${f.getName()}\``).join(", ")}.`;
+      return `Exports ${fns.length} utility functions: ${fns
+        .map((f) => `\`${f.getName()}\``)
+        .join(", ")}.`;
     }
   }
 
+  // ── Guard ────────────────────────────────────────────────────────────────
   if (role === "guard") {
     const cls = sourceFile.getClasses().find((c) => c.isExported());
     return `Exported route guard${cls ? ` (${cls.getName()})` : ""}. Controls route access.`;
   }
 
+  // ── Pipe ─────────────────────────────────────────────────────────────────
   if (role === "pipe") {
     const cls = sourceFile.getClasses().find((c) => c.isExported());
-    return `Exported pipe${cls ? ` (${cls.getName()})` : ""}. Transforms template values.`;
+    return `Exported Angular pipe${cls ? ` (${cls.getName()})` : ""}. Transforms template values.`;
   }
 
+  // ── Routes ───────────────────────────────────────────────────────────────
   if (role === "routes") {
     return "Exported route configuration. Defines navigation structure.";
   }
 
+  // ── Context ──────────────────────────────────────────────────────────────
   if (role === "context") {
     return "Exported React context. Provides shared state to the component tree.";
   }
 
+  // ── Fallback ─────────────────────────────────────────────────────────────
   const exportCount = sourceFile.getExportedDeclarations().size;
   return `Exports ${exportCount} symbol(s). Role: ${role}.`;
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+// "store" intentionally excluded — handled separately above
+// to support both class-based and functional stores.
+const CLASS_ROLES: FileRole[] = [
+  "service",
+  "facade",
+  "repository",
+  "controller",
+  "directive",
+];
+
+function isClassRole(role: FileRole): boolean {
+  return CLASS_ROLES.includes(role);
+}
+
+function roleLabel(role: FileRole): string {
+  const labels: Partial<Record<FileRole, string>> = {
+    service: "service class",
+    facade: "facade class",
+    repository: "repository class",
+    controller: "controller class",
+    directive: "Angular directive",
+  };
+  return labels[role] ?? role;
+}
+
+function buildFunctionalStoreSummary(sourceFile: SourceFile): string {
+  const calls = sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression);
+  for (const call of calls) {
+    if (call.getExpression().getText() !== "withState") continue;
+    const args = call.getArguments();
+    if (!args.length) continue;
+    const firstArg = args[0];
+    if (firstArg.getKind() === SyntaxKind.ObjectLiteralExpression) {
+      const props = (firstArg as any).getProperties?.() ?? [];
+      return `Exported functional store. Manages ${props.length} state field(s) via withState.`;
+    }
+  }
+  return "Exported functional store. Manages application state.";
 }
 
 function buildParamsSummary(fn: { getParameters: () => any[] }): string {
