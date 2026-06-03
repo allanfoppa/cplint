@@ -1,10 +1,11 @@
-import { Node, SyntaxKind } from "ts-morph";
+import { Node } from "ts-morph";
 import type { Node as MorphNode, TypeChecker } from "ts-morph";
 import type { ApiSurfaceRow, Config } from "../../../../types/index.js";
 import { firstExportDecls } from "../../../../utils/first-export-decls.js";
 import { getDisplayName } from "../../../../utils/get-display-name.js";
 import { shortType } from "../../../../utils/short-type.js";
 import { classifyDeclaration } from "../classifiers/classify-declaration.js";
+import { buildApiRow } from "../../../../utils/api-surface-compat.js";
 
 export function extractApiSurface(
   exported: ReadonlyMap<string, MorphNode[]>,
@@ -17,7 +18,7 @@ export function extractApiSurface(
     const name = getDisplayName(exportName, decl);
     const kind = classifyDeclaration(decl, name, config);
 
-    // ── Hook: extract return type (what the hook exposes) ───────────────────
+    // ── Hook: params + return type ───────────────────────────────────────────
     if (kind === "hook") {
       const fn = Node.isFunctionDeclaration(decl)
         ? decl
@@ -32,8 +33,8 @@ export function extractApiSurface(
           Node.isFunctionExpression(fn))
       ) {
         const params =
-          (Node.isFunctionDeclaration(fn) ? fn : fn)
-            // @ts-ignore — getParameters exists on all function-like nodes
+          // @ts-ignore — getParameters exists on all function-like nodes
+          fn
             .getParameters?.()
             ?.map(
               (p: any) =>
@@ -42,25 +43,33 @@ export function extractApiSurface(
             .join(", ") ?? "";
 
         const ret = shortType(checker.getTypeAtLocation(fn).getText(fn));
-
-        rows.push({ name: `${name}(${params})`, kind, type: ret });
+        rows.push(buildApiRow({ name, kind, type: ret, params }));
       }
       continue;
     }
 
-    // ── Component: extract Props type ────────────────────────────────────────
-    if (kind === "component") {
+    // ── Component: props type ────────────────────────────────────────────────
+    if (kind === "component" || kind === "page") {
       const propsType = extractPropsType(decl, checker);
-      rows.push({ name, kind, type: propsType ?? "void" });
+      rows.push(
+        buildApiRow({
+          name,
+          kind,
+          type: "JSX.Element",
+          params: propsType ?? "",
+        }),
+      );
       continue;
     }
 
-    // ── Everything else: type at location ────────────────────────────────────
-    rows.push({
-      name,
-      kind,
-      type: shortType(checker.getTypeAtLocation(decl).getText(decl)),
-    });
+    // ── Everything else ──────────────────────────────────────────────────────
+    rows.push(
+      buildApiRow({
+        name,
+        kind,
+        type: shortType(checker.getTypeAtLocation(decl).getText(decl)),
+      }),
+    );
   }
 
   return rows;
@@ -70,7 +79,6 @@ function extractPropsType(
   decl: MorphNode,
   checker: TypeChecker,
 ): string | null {
-  // Function declaration: first parameter = props
   if (Node.isFunctionDeclaration(decl)) {
     const firstParam = decl.getParameters()[0];
     if (firstParam) {
@@ -80,7 +88,6 @@ function extractPropsType(
     }
   }
 
-  // Arrow function / function expression in variable
   if (Node.isVariableDeclaration(decl)) {
     const init = decl.getInitializer();
     if (

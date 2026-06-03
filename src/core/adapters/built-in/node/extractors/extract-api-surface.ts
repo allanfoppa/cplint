@@ -9,6 +9,7 @@ import {
 import type { ApiSurfaceRow, Config } from "../../../../types/index.js";
 import { getDisplayName } from "../../../../utils/get-display-name.js";
 import { shortType } from "../../../../utils/short-type.js";
+import { buildApiRow } from "../../../../utils/api-surface-compat.js";
 
 export function extractApiSurface(
   exported: ReadonlyMap<string, ExportedDeclarations[]>,
@@ -42,7 +43,13 @@ export function extractApiSurface(
       Node.isInterfaceDeclaration(decl) ||
       Node.isTypeAliasDeclaration(decl)
     ) {
-      rows.push({ name, kind: "type", type: shortType(decl.getText()) });
+      rows.push(
+        buildApiRow({
+          name,
+          kind: "type",
+          type: shortType(decl.getText()),
+        }),
+      );
       continue;
     }
   }
@@ -58,7 +65,7 @@ function extractClassMembers(
   checker: TypeChecker,
 ): ApiSurfaceRow[] {
   const rows: ApiSurfaceRow[] = [
-    { name: className, kind: "class", type: className },
+    buildApiRow({ name: className, kind: "class", type: className }),
   ];
 
   cls
@@ -70,11 +77,14 @@ function extractClassMembers(
         .map((p) => `${p.getName()}: ${shortType(p.getType().getText(p))}`)
         .join(", ");
       const ret = shortType(method.getReturnType().getText(method));
-      rows.push({
-        name: `  ${method.getName()}(${params})`,
-        kind: "method",
-        type: ret,
-      });
+      rows.push(
+        buildApiRow({
+          name: `  ${method.getName()}`,
+          kind: "method",
+          type: ret,
+          params,
+        }),
+      );
     });
 
   return rows;
@@ -90,7 +100,8 @@ function extractFunction(
     .map((p) => `${p.getName()}: ${shortType(p.getType().getText(p))}`)
     .join(", ");
   const ret = shortType(fn.getReturnType().getText(fn));
-  return { name: `${name}(${params})`, kind: "function", type: ret };
+  const flags = fn.isAsync() ? ["async"] : [];
+  return buildApiRow({ name, kind: "function", type: ret, params, flags });
 }
 
 function extractVariable(
@@ -98,9 +109,9 @@ function extractVariable(
   decl: VariableDeclaration,
   _checker: TypeChecker,
 ): ApiSurfaceRow {
-  return {
+  return buildApiRow({
     name,
     kind: "variable",
     type: shortType(decl.getType().getText(decl)),
-  };
+  });
 }

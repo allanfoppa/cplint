@@ -6,6 +6,7 @@ import type {
 } from "../../types/index.js";
 import { normalizePath } from "../../utils/normalize-path.js";
 import { humanizeTitle } from "../../utils/humanize-text.js";
+import { buildSummary } from "../../utils/add-type-summary.js";
 
 export function buildContext({
   sourceFile,
@@ -25,6 +26,7 @@ export function buildContext({
   return {
     title,
     role,
+    summary: buildSummary(sourceFile, role, checker),
     meta: {
       generated: new Date().toISOString().slice(0, 10),
       entry: normalizePath(sourceFile.getFilePath()),

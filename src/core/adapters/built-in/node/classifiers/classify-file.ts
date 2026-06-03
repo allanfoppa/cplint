@@ -1,14 +1,14 @@
 import type { SourceFile } from "ts-morph";
 import type { FileRole } from "../../../../types/index.js";
 
-/**
- * Classifies a plain TypeScript/Node source file into a FileRole.
- *
- * No framework decorators available — relies on:
- * 1. File name suffix (most reliable)
- * 2. Export shape (class vs function vs const)
- * 3. Content patterns (express Router, repository patterns, etc.)
- */
+const HTTP_FRAMEWORK_MODULES = [
+  "express",
+  "fastify",
+  "hono",
+  "@hono/hono",
+  "koa",
+];
+
 export function classifyNodeFile(file: SourceFile): FileRole {
   const base = file.getBaseNameWithoutExtension().toLowerCase();
 
@@ -31,8 +31,7 @@ export function classifyNodeFile(file: SourceFile): FileRole {
   if (base.endsWith(".page")) return "page";
 
   // ── Export shape heuristics ──────────────────────────────────────────────
-  const classes = file.getClasses();
-  for (const cls of classes) {
+  for (const cls of file.getClasses()) {
     const name = cls.getName() ?? "";
     if (/Facade$/.test(name)) return "facade";
     if (/Repository$|Repo$/.test(name)) return "repository";
@@ -42,24 +41,23 @@ export function classifyNodeFile(file: SourceFile): FileRole {
     if (/Page$/.test(name)) return "page";
   }
 
-  // ── Content patterns ─────────────────────────────────────────────────────
-  const text = file.getFullText();
+  // ── Import-based HTTP framework detection ────────────────────────────────
+  const importedModules = file
+    .getImportDeclarations()
+    .map((i) => i.getModuleSpecifierValue());
 
-  // Express / Fastify / Hono router
-  if (
-    text.includes("express") ||
-    text.includes("Router()") ||
-    text.includes(".get(") ||
-    text.includes(".post(")
-  ) {
+  if (importedModules.some((m) => HTTP_FRAMEWORK_MODULES.includes(m))) {
     return "controller";
   }
 
-  // Functions that look like hooks (useX pattern — used outside React too)
-  const functions = file.getFunctions();
-  for (const fn of functions) {
+  // ── Hook pattern ─────────────────────────────────────────────────────────
+  for (const fn of file.getFunctions()) {
     if (/^use[A-Z]/.test(fn.getName() ?? "")) return "hook";
   }
+
+  // ── Simple export pattern ────────────────────────────────────────────────
+  const exportedFunctions = file.getFunctions().filter((f) => f.isExported());
+  if (exportedFunctions.length) return "util";
 
   return "unknown";
 }

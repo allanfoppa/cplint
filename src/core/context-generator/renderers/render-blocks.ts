@@ -1,7 +1,7 @@
 export function renderAutoBlock(name: string, content: string): string {
   return [
     `<!-- AUTO:START ${name} -->`,
-    content || "- none",
+    content,
     `<!-- AUTO:END ${name} -->`,
   ].join("\n");
 }
@@ -9,7 +9,7 @@ export function renderAutoBlock(name: string, content: string): string {
 export function renderManualBlock(name: string, content: string): string {
   return [
     `<!-- MANUAL:START ${name} -->`,
-    content || "",
+    content,
     `<!-- MANUAL:END ${name} -->`,
   ].join("\n");
 }

@@ -1,14 +1,11 @@
 import { loadConfig } from "../../config/load-config.js";
-import { runLinter } from "../../core/linter/runner/lint-runner.js";
-import {
-  getExitCode,
-  reportToJson,
-  reportToStdout,
-} from "../../core/linter/runner/reporter.js";
-import { DEFAULT_CONFIG } from "../../core/types/index.js";
+import { resolveRules } from "../../core/linter/rules/registry.js";
+import { runLintRunner } from "../../core/linter/runner/lint-runner.js";
+import { report } from "../../core/linter/runner/reporter.js";
 
 type LintOptions = {
   format?: "stdout" | "json";
+  legacyRules?: boolean;
 };
 
 export async function runLint(options: LintOptions = {}): Promise<void> {
@@ -26,6 +23,7 @@ export async function runLint(options: LintOptions = {}): Promise<void> {
       lint: {
         rules: {
           'no-cross-feature-import': 'error',
+          'no-empty-manual-blocks': 'warn',
         }
       }
     }
@@ -33,17 +31,17 @@ export async function runLint(options: LintOptions = {}): Promise<void> {
     process.exit(1);
   }
 
-  const results = await runLinter({
-    rootPaths: config.rootPath,
-    rulesConfig: config.lint.rules,
-    config: { ...DEFAULT_CONFIG, ...config },
+  const rules = resolveRules(options.legacyRules ?? false, config.lint.rules);
+
+  const violations = runLintRunner({
+    rootPath: config.rootPath,
+    exclude: config.exclude ?? ["node_modules", "dist", ".git"],
+    rules,
+    format: options.format ?? "stdout",
   });
 
-  if (options.format === "json") {
-    console.log(reportToJson(results));
-  } else {
-    reportToStdout(results);
-  }
+  const { output, exitCode } = report(violations, options.format ?? "stdout");
 
-  process.exit(getExitCode(results));
+  process.stdout.write(output);
+  process.exit(exitCode);
 }

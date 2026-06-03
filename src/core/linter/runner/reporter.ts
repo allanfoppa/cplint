@@ -1,80 +1,54 @@
-import type { LintResult, Violation } from "../types.js";
+import type { LintViolation } from "../types.js";
 
 const ICONS: Record<string, string> = {
   error: "✖",
   warn: "⚠",
-  info: "ℹ",
 };
 
-const COLORS: Record<string, string> = {
-  error: "\x1b[31m", // red
-  warn: "\x1b[33m", // yellow
-  info: "\x1b[36m", // cyan
-  reset: "\x1b[0m",
-  dim: "\x1b[2m",
-  bold: "\x1b[1m",
-};
-
-// ─── Stdout Reporter ─────────────────────────────────────────────────────────
-
-export function reportToStdout(results: LintResult[]): void {
-  if (!results.length) {
-    console.log(`\n${COLORS.bold}✔ No violations found.${COLORS.reset}\n`);
-    return;
+function formatStdout(violations: LintViolation[]): string {
+  if (!violations.length) {
+    return "✔ No lint violations found.\n";
   }
 
-  let totalErrors = 0;
-  let totalWarnings = 0;
+  const byFile = new Map<string, LintViolation[]>();
+  for (const v of violations) {
+    if (!byFile.has(v.file)) byFile.set(v.file, []);
+    byFile.get(v.file)!.push(v);
+  }
 
-  for (const result of results) {
-    const relativePath = toRelative(result.file);
-    console.log(`\n${COLORS.bold}${relativePath}${COLORS.reset}`);
-
-    for (const v of result.violations) {
-      const color = COLORS[v.severity] ?? COLORS.reset;
-      const icon = ICONS[v.severity] ?? "•";
-      const line = v.line ? `${COLORS.dim}:${v.line}${COLORS.reset}` : "";
-
-      console.log(
-        `  ${color}${icon}${COLORS.reset}${line}  ${v.message}  ${COLORS.dim}[${v.ruleId}]${COLORS.reset}`,
-      );
-
-      if (v.severity === "error") totalErrors++;
-      if (v.severity === "warn") totalWarnings++;
+  const lines: string[] = [];
+  for (const [file, vs] of byFile) {
+    lines.push(`\n${file}`);
+    for (const v of vs) {
+      const icon = ICONS[v.severity] ?? "·";
+      const block = v.block ? ` [${v.block}]` : "";
+      lines.push(`  ${icon} ${v.severity}  ${v.rule}${block}`);
+      lines.push(`    ${v.message}`);
     }
   }
 
-  const summary = [
-    totalErrors
-      ? `${COLORS.error}${totalErrors} error${totalErrors > 1 ? "s" : ""}${COLORS.reset}`
-      : "",
-    totalWarnings
-      ? `${COLORS.warn}${totalWarnings} warning${totalWarnings > 1 ? "s" : ""}${COLORS.reset}`
-      : "",
-  ]
-    .filter(Boolean)
-    .join(", ");
-
-  console.log(`\n${summary}\n`);
-}
-
-// ─── JSON Reporter ────────────────────────────────────────────────────────────
-
-export function reportToJson(results: LintResult[]): string {
-  return JSON.stringify(results, null, 2);
-}
-
-// ─── Exit Code ───────────────────────────────────────────────────────────────
-
-export function getExitCode(results: LintResult[]): number {
-  const hasErrors = results.some((r) =>
-    r.violations.some((v) => v.severity === "error"),
+  const errors = violations.filter((v) => v.severity === "error").length;
+  const warns = violations.filter((v) => v.severity === "warn").length;
+  lines.push(
+    `\n${violations.length} problem(s): ${errors} error(s), ${warns} warning(s)`,
   );
-  return hasErrors ? 1 : 0;
+
+  return lines.join("\n") + "\n";
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+function formatJson(violations: LintViolation[]): string {
+  return JSON.stringify(violations, null, 2) + "\n";
+}
 
-function toRelative(filePath: string): string {
-  return filePath.replace(process.cwd(), ".").replace(/\\/g, "/");
+export function report(
+  violations: LintViolation[],
+  format: "stdout" | "json",
+): { output: string; exitCode: number } {
+  const hasErrors = violations.some((v) => v.severity === "error");
+
+  return {
+    output:
+      format === "json" ? formatJson(violations) : formatStdout(violations),
+    exitCode: hasErrors ? 1 : 0,
+  };
 }

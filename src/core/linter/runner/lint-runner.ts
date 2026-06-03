@@ -1,73 +1,51 @@
-import path from "node:path";
-import { Project } from "ts-morph";
-import type { Config } from "../../types/index.js";
-import type { LintResult, Violation } from "../types.js";
-import { resolveRules, type RulesConfig } from "../rules/registry.js";
+import { readFileSync } from "fs";
+import fg from "fast-glob";
+import type { LintFile, LintRule, LintViolation } from "../types.js";
 
-interface LintRunnerOptionsConfig extends Config {
-  exclude?: string[] | undefined;
-}
+function parseContextFile(path: string, content: string): LintFile {
+  const manualBlocks: Record<string, string> = {};
+  const autoBlocks: Record<string, string> = {};
 
-export interface LintRunnerOptions {
-  rootPaths: string[];
-  rulesConfig: RulesConfig;
-  config: LintRunnerOptionsConfig;
-  tsConfigFilePath?: string;
-}
+  const manualRegex =
+    /<!-- MANUAL:START ([a-z-]+) -->([\s\S]*?)<!-- MANUAL:END \1 -->/g;
+  const autoRegex =
+    /<!-- AUTO:START ([a-z-]+) -->([\s\S]*?)<!-- AUTO:END \1 -->/g;
 
-export async function runLinter(
-  options: LintRunnerOptions,
-): Promise<LintResult[]> {
-  const { rootPaths, rulesConfig, config } = options;
-
-  const project = new Project({
-    tsConfigFilePath: path.resolve(
-      process.cwd(),
-      options.tsConfigFilePath ?? config.tsConfigFilePath,
-    ),
-    skipAddingFilesFromTsConfig: false,
-  });
-
-  const resolvedRules = resolveRules(rulesConfig);
-
-  if (!resolvedRules.length) {
-    console.warn(
-      "⚠️  No rules configured. Add rules under lint.rules in cplint.config.ts",
-    );
-    return [];
+  for (const match of content.matchAll(manualRegex)) {
+    manualBlocks[match[1]] = match[2].replace(/^\n/, "").replace(/\n\s*$/, "");
+  }
+  for (const match of content.matchAll(autoRegex)) {
+    autoBlocks[match[1]] = match[2].replace(/^\n/, "").replace(/\n\s*$/, "");
   }
 
-  // Collect source files under the configured rootPaths
-  const sourceFiles = project.getSourceFiles().filter((sf) => {
-    const filePath = sf.getFilePath();
-    return (
-      !filePath.includes("node_modules") &&
-      rootPaths.some((root) => filePath.includes(root)) &&
-      !options.config.exclude?.some((ex: string) => filePath.includes(ex))
-    );
-  });
+  return { path, content, manualBlocks, autoBlocks };
+}
 
-  const results: LintResult[] = [];
+export type LintRunnerOptions = {
+  rootPath: string[];
+  exclude: string[]; // was "ignore" — aligns with CPLintContextConfig
+  rules: LintRule[];
+  format: "stdout" | "json";
+};
 
-  for (const sourceFile of sourceFiles) {
-    const violations: Violation[] = [];
+export function runLintRunner(options: LintRunnerOptions): LintViolation[] {
+  const patterns = options.rootPath.map((root) => `${root}/**/*.context.ai.md`);
 
-    for (const { rule, severity } of resolvedRules) {
-      const found = rule.check(sourceFile, config);
+  const files = patterns.flatMap((pattern) =>
+    fg.sync(pattern, { ignore: options.exclude }),
+  );
 
-      // Apply the user-configured severity (may override rule default)
-      for (const violation of found) {
-        violations.push({ ...violation, severity });
-      }
-    }
+  const allViolations: LintViolation[] = [];
 
-    if (violations.length) {
-      results.push({
-        file: sourceFile.getFilePath(),
-        violations,
-      });
+  for (const filePath of files) {
+    const content = readFileSync(filePath, "utf-8");
+    const lintFile = parseContextFile(filePath, content);
+
+    for (const rule of options.rules) {
+      const violations = rule.run(lintFile);
+      allViolations.push(...violations);
     }
   }
 
-  return results;
+  return allViolations;
 }

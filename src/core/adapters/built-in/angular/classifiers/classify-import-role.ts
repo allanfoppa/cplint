@@ -1,14 +1,13 @@
 import type { SourceFile } from "ts-morph";
 import type { FileRole } from "../../../../types/index.js";
 
-/**
- * Classifies an Angular source file into a semantic FileRole.
- *
- * Strategy (in priority order):
- * 1. Decorator-based — most reliable (@Component, @Injectable, etc.)
- * 2. Name-suffix-based — fallback for files without decorators (routes, models)
- * 3. Content-based — last resort (e.g. pure function files like hooks/utils)
- */
+const GUARD_INTERFACES = [
+  "CanActivate",
+  "CanMatch",
+  "CanDeactivate",
+  "CanLoad",
+];
+
 export function classifyAngularFile(file: SourceFile): FileRole {
   const classes = file.getClasses();
 
@@ -25,27 +24,29 @@ export function classifyAngularFile(file: SourceFile): FileRole {
     if (decoratorNames.includes("Pipe")) return "pipe";
 
     if (decoratorNames.includes("Injectable")) {
+      const implemented = cls
+        .getImplements()
+        .map((i) => i.getExpression().getText());
+
+      if (implemented.some((i) => GUARD_INTERFACES.includes(i))) return "guard";
+
       const name = cls.getName() ?? "";
+      if (/Guard$/.test(name)) return "guard"; // fallback por nome
       if (/Facade$/.test(name)) return "facade";
       if (/Store$/.test(name)) return "store";
       if (/Repository$/.test(name)) return "repository";
-      if (/Service$/.test(name)) return "service";
-      return "service"; // Injectable without a known suffix → service
+      return "service";
     }
   }
 
-  // Decorator-less files — use file name as signal
   const base = file.getBaseNameWithoutExtension().toLowerCase();
-
   if (base.endsWith(".routes") || base === "routes") return "routes";
   if (base.endsWith(".model") || base.endsWith(".models")) return "model";
   if (base.endsWith(".util") || base.endsWith(".utils")) return "util";
 
-  // Functional Angular (signals-based pages without @Component in some patterns)
   const functions = file.getFunctions();
   for (const fn of functions) {
-    const name = fn.getName() ?? "";
-    if (/Page$/.test(name)) return "page";
+    if (/Page$/.test(fn.getName() ?? "")) return "page";
   }
 
   return "unknown";

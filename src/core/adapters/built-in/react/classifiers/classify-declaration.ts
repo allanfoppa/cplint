@@ -2,6 +2,13 @@ import { Node, SyntaxKind } from "ts-morph";
 import type { Node as MorphNode } from "ts-morph";
 import type { Config } from "../../../../types/index.js";
 
+function hasJSXDescendants(node: MorphNode): boolean {
+  return (
+    node.getDescendantsOfKind(SyntaxKind.JsxElement).length > 0 ||
+    node.getDescendantsOfKind(SyntaxKind.JsxSelfClosingElement).length > 0
+  );
+}
+
 export function classifyDeclaration(
   decl: MorphNode,
   name: string,
@@ -9,20 +16,19 @@ export function classifyDeclaration(
 ): string {
   if (Node.isFunctionDeclaration(decl)) {
     if (/^use[A-Z]/.test(name)) return "hook";
-    const hasJSX =
-      decl.getDescendantsOfKind(SyntaxKind.JsxElement).length > 0 ||
-      decl.getDescendantsOfKind(SyntaxKind.JsxSelfClosingElement).length > 0;
-    return hasJSX ? "component" : "function";
+    return hasJSXDescendants(decl) ? "component" : "function";
   }
 
   if (Node.isVariableDeclaration(decl)) {
     if (/^use[A-Z]/.test(name)) return "hook";
     const init = decl.getInitializer();
     if (init) {
-      const hasJSX =
-        init.getDescendantsOfKind(SyntaxKind.JsxElement).length > 0 ||
-        init.getDescendantsOfKind(SyntaxKind.JsxSelfClosingElement).length > 0;
-      if (hasJSX) return "component";
+      // unwrap React.memo(…) e React.forwardRef(…)
+      if (Node.isCallExpression(init)) {
+        const expr = init.getExpression().getText();
+        if (/^React\.(memo|forwardRef)$/.test(expr)) return "component";
+      }
+      if (hasJSXDescendants(init)) return "component";
     }
     return "variable";
   }

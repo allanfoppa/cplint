@@ -1,40 +1,44 @@
-import type { SourceFile } from "ts-morph";
-import type { Config } from "../types/index.js";
+export type LintSeverity = "error" | "warn";
 
-// ─── Severity ────────────────────────────────────────────────────────────────
-
-export type Severity = "error" | "warn" | "info";
-
-// ─── Violation ───────────────────────────────────────────────────────────────
-
-export interface Violation {
-  ruleId: string;
-  severity: Severity;
+export type LintViolation = {
+  rule: string;
+  severity: LintSeverity;
+  file: string;
   message: string;
-  file: string;
-  line?: number;
-}
+  /** Optional: which block or section triggered the violation */
+  block?: string;
+};
 
-// ─── Fix ─────────────────────────────────────────────────────────────────────
+export type LintRule = {
+  name: string;
+  severity: LintSeverity;
+  run(file: LintFile): LintViolation[];
+};
 
-export interface Fix {
-  description: string;
-  apply(): void;
-}
+/**
+ * Parsed representation of a .context.ai.md file passed to each rule.
+ */
+export type LintFile = {
+  /** Absolute path to the .context.ai.md file */
+  path: string;
+  /** Raw markdown content */
+  content: string;
+  /** All MANUAL block values keyed by block name */
+  manualBlocks: Record<string, string>;
+  /** All AUTO block values keyed by block name */
+  autoBlocks: Record<string, string>;
+};
 
-// ─── Rule ────────────────────────────────────────────────────────────────────
-
-export interface Rule {
-  id: string;
-  severity: Severity;
-  description: string;
-  check(file: SourceFile, config: Config): Violation[];
-  fix?(violation: Violation): Fix;
-}
-
-// ─── Lint Result ─────────────────────────────────────────────────────────────
-
-export interface LintResult {
-  file: string;
-  violations: Violation[];
-}
+/**
+ * Maps rule names to their active severity level.
+ * "off" disables the rule entirely.
+ *
+ * Example (cplint.config.ts):
+ *   lint: {
+ *     rules: {
+ *       'no-empty-manual-blocks': 'error',
+ *       'no-cross-feature-import': 'warn',
+ *     }
+ *   }
+ */
+export type RulesConfig = Record<string, LintSeverity | "off">;

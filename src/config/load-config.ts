@@ -2,7 +2,7 @@ import { access, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { CPLintAdapter } from "../core/types/index.js";
-import type { RulesConfig } from "../core/linter/rules/registry.js";
+import type { RulesConfig } from "../core/linter/types.js";
 
 export interface CPLintContextConfig {
   rootPath: string[];
