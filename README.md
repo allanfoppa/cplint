@@ -6,7 +6,7 @@
 
 CPLint is a specialized, AST-powered context generator and structural YAML linter designed to feed Large Language Models (like Cursor, Copilot, or custom agents) with highly optimized repository metadata. It reduces LLM token consumption by executing static AST analysis (via `ts-morph`), stripping redundant ecosystem boilerplate, and outputting highly structured `*.context.ai.yaml` files.
 
-It also ships with an integrated linter to ensure developers fill out core business rules before prompting.
+**Inspired by the philosophy and structure of ESLint**, CPLint brings predictable, configuration-driven linting rules to AI context orchestration—ensuring developers document core business rules before sending prompts to the LLM.
 
 ---
 
