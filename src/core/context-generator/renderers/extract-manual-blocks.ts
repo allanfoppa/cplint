@@ -1,32 +1,42 @@
+import YAML from "yaml";
 import type { ManualBlocks } from "../../types/index.js";
 
 /**
  * Extracts all MANUAL blocks from an existing .context.ai.yaml file.
- * Parsed by matching top-level properties indented under the 'manual:' block scope.
+ * Uses YAML.parse for correctness — handles multiline strings, quotes,
+ * special characters, and all valid YAML the dev might write.
  */
 export function extractManualBlocks(yamlContent: string): ManualBlocks {
   const blocks: ManualBlocks = {};
 
-  // Locates the start index of the manual partition block
-  const manualSectionIndex = yamlContent.search(/^manual:\s*$/m);
-  if (manualSectionIndex === -1) return blocks;
+  try {
+    const parsed = YAML.parse(yamlContent) as {
+      manual?: Record<string, unknown>;
+    };
 
-  // Isolates everything written below the 'manual:' key
-  const manualZone = yamlContent.substring(manualSectionIndex);
+    if (!parsed?.manual || typeof parsed.manual !== "object") return blocks;
 
-  // Matches child keys (indented by 2 spaces) and grabs everything until the next key or file end
-  const blockRegex = /^  ([a-z-]+):\s*\n((?:^    .*\n?)*)/gm;
+    for (const [key, value] of Object.entries(parsed.manual)) {
+      if (value === null || value === undefined) {
+        blocks[key] = "-";
+        continue;
+      }
 
-  for (const match of manualZone.matchAll(blockRegex)) {
-    const key = match[1];
-    // Captures the block content and strips the baseline 4-space indentation used in the file layer
-    const body = match[2]
-      .split("\n")
-      .map((line) => line.substring(4))
-      .join("\n")
-      .trimEnd();
+      if (Array.isArray(value)) {
+        // Filter null/empty items that represent blank placeholders (- \n)
+        const items = value.filter(
+          (v) => v !== null && v !== undefined && v !== "",
+        );
+        blocks[key] = items.length
+          ? items.map((v) => `- ${String(v)}`).join("\n")
+          : "-";
+        continue;
+      }
 
-    blocks[key] = body;
+      blocks[key] = String(value);
+    }
+  } catch {
+    // Malformed YAML — return empty, lint rule will catch the issue
   }
 
   return blocks;

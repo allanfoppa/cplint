@@ -8,7 +8,7 @@ export default defineConfig({
   fixedExtension: false,
   platform: "node",
   outputOptions: {
-    inlineDynamicImports: true,
+    codeSplitting: false,
   },
   sourcemap: true,
   dts: {

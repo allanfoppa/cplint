@@ -12,7 +12,7 @@ export type LintViolation = {
 export type LintRule = {
   name: string;
   severity: LintSeverity;
-  run(file: LintFile): LintViolation[];
+  run(file: LintFile, severity: LintSeverity): LintViolation[];
 };
 
 /**

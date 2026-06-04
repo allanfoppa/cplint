@@ -5,12 +5,14 @@ export function renderStateShape(rows: StateShapeRow[]): string {
 
   return rows
     .map((row) => {
-      const header = `${row.name}:`;
-      const fields = row.fields.length
-        ? row.fields.map((f) => `${f.name}: ${f.type}`).join("\n")
-        : "none";
+      const key = row.name.trim();
+      if (!row.fields.length) return `${key}: none`;
 
-      return `${header}\n${fields}`;
+      const fields = row.fields
+        .map((f) => `  ${f.name}: "${f.type.replace(/"/g, "'")}"`)
+        .join("\n");
+
+      return `${key}:\n${fields}`;
     })
     .join("\n");
 }

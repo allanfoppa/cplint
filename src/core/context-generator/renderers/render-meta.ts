@@ -5,8 +5,8 @@ export function renderMeta(
   role: SemanticContext["role"],
 ): string {
   const relatedFiles = meta.related.length
-    ? meta.related.map((x) => `- ${x}`).join("\n")
-    : "- none";
+    ? meta.related.map((x) => `  - ${x}`).join("\n")
+    : "  - none";
 
   return [
     `role: ${role}`,

@@ -5,7 +5,12 @@ export function renderApiSurface(rows: ApiSurfaceRow[]): string {
 
   return rows
     .map((row) => {
-      return `${row.name}:\n  signature: "${row.signature.trim().replace(/"/g, "'")}"\n  flags: [${row.flags.join(", ")}]`;
+      // Names for methods come with leading spaces from extractors ("  loadAll")
+      // — trim before using as YAML key
+      const key = row.name.trim();
+      const safeSignature = row.signature.trim().replace(/"/g, "'");
+      const flags = row.flags.join(", ");
+      return `${key}:\n  signature: "${safeSignature}"\n  flags: [${flags}]`;
     })
     .join("\n");
 }

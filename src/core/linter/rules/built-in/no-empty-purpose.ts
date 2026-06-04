@@ -3,16 +3,21 @@
  * blocks, not just `purpose`. This file is kept for backwards compatibility
  * and re-exports the relevant violation from the general rule.
  */
-import type { LintFile, LintRule, LintViolation } from "../../types.js";
+import type {
+  LintFile,
+  LintRule,
+  LintViolation,
+  LintSeverity,
+} from "../../types.js";
 import { noEmptyManualBlocks } from "./no-empty-manual-blocks.js";
 
 export const noEmptyPurpose: LintRule = {
   name: "no-empty-purpose",
   severity: "error",
 
-  run(file: LintFile): LintViolation[] {
+  run(file: LintFile, severity: LintSeverity): LintViolation[] {
     return noEmptyManualBlocks
-      .run(file)
+      .run(file, severity)
       .filter((v) => v.block === "purpose")
       .map((v) => ({ ...v, rule: "no-empty-purpose" }));
   },

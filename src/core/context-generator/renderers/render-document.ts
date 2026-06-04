@@ -11,7 +11,7 @@ import { renderApiSurface } from "./render-api-surface.js";
 import { renderDeps } from "./render-deps.js";
 import { renderCriticalFlow } from "./render-critical-flow.js";
 import { renderChecklist } from "./render-checklist.js";
-import { renderAutoBlock, renderManualBlock } from "./render-blocks.js";
+import { renderBlock } from "./render-blocks.js";
 import { renderStateShape } from "./render-state-shape.js";
 import { renderSummary } from "./render-summary.js";
 
@@ -28,29 +28,21 @@ export function renderDocument(
 
   // 1. Build the auto-generated section items
   const autoSections: string[] = [
-    renderAutoBlock("meta", renderMeta(context.meta, context.role)),
+    renderBlock("meta", renderMeta(context.meta, context.role)),
     `summary: ${renderSummary(context.summary)}`,
-    renderAutoBlock(
+    renderBlock(
       "entry-points",
       renderEntryPoints(context.entryPoints) || "- none",
     ),
-    renderAutoBlock("api-surface", renderApiSurface(context.apiSurface)),
-    renderAutoBlock("deps", renderDeps(context.deps)),
+    renderBlock("api-surface", renderApiSurface(context.apiSurface)),
+    renderBlock("deps", renderDeps(context.deps)),
     ...(context.stateShape.length
-      ? [renderAutoBlock("state-shape", renderStateShape(context.stateShape))]
+      ? [renderBlock("state-shape", renderStateShape(context.stateShape))]
       : []),
     ...(context.criticalFlow.length
-      ? [
-          renderAutoBlock(
-            "critical-flow",
-            renderCriticalFlow(context.criticalFlow),
-          ),
-        ]
+      ? [renderBlock("critical-flow", renderCriticalFlow(context.criticalFlow))]
       : []),
-    renderAutoBlock(
-      "change-checklist",
-      renderChecklist(context.changeChecklist),
-    ),
+    renderBlock("change-checklist", renderChecklist(context.changeChecklist)),
   ];
 
   // 2. Build ALL manual section items (Always emit them so the dev can fill them)
@@ -67,7 +59,7 @@ export function renderDocument(
 
   for (const key of manualKeys) {
     const content = manual[key] ?? "- ";
-    manualSections.push(renderManualBlock(key, content));
+    manualSections.push(renderBlock(key, content));
   }
 
   function indentBlock(content: string, spaces = 2): string {

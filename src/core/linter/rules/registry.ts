@@ -2,11 +2,13 @@ import type { LintRule } from "../types.js";
 import type { RulesConfig } from "../types.js";
 import { noEmptyManualBlocks } from "./built-in/no-empty-manual-blocks.js";
 import { noEmptyPurpose } from "./built-in/no-empty-purpose.js";
-import { noCrossFeatureImport } from "./built-in/no-cross-feature-import.js";
+import { noStaleContext } from "./built-in/no-stale-context.js";
+
+export type { RulesConfig };
 
 const BUILT_IN: Record<string, LintRule> = {
   "no-empty-manual-blocks": noEmptyManualBlocks,
-  "no-cross-feature-import": noCrossFeatureImport,
+  "no-stale-context": noStaleContext,
 };
 
 const LEGACY: Record<string, LintRule> = {
@@ -16,11 +18,8 @@ const LEGACY: Record<string, LintRule> = {
 /**
  * Resolves the active rule set from the user's RulesConfig.
  *
- * RulesConfig maps rule names to "error" | "warn" | "off".
  * When no config is provided all built-in rules run at their default severity.
- *
- * @param includeLegacy - also expose deprecated rule aliases
- * @param rulesConfig   - user config from cplint.config.ts `lint.rules`
+ * "off" disables a rule entirely.
  */
 export function resolveRules(
   includeLegacy = false,
@@ -40,7 +39,6 @@ export function resolveRules(
         console.warn(`[CPLint] Unknown rule "${name}" in config — skipped.`);
         return [];
       }
-      // Override severity from config
       return [{ ...rule, severity: level as "error" | "warn" }];
     });
 }

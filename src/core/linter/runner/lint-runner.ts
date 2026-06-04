@@ -72,7 +72,7 @@ export function runLintRunner(options: LintRunnerOptions): LintViolation[] {
     const lintFile = parseContextFile(filePath, content);
 
     for (const rule of options.rules) {
-      const violations = rule.run(lintFile);
+      const violations = rule.run(lintFile, rule.severity);
       allViolations.push(...violations);
     }
   }

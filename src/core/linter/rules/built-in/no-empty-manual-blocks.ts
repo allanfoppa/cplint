@@ -1,4 +1,9 @@
-import type { LintFile, LintRule, LintViolation } from "../../types.js";
+import type {
+  LintFile,
+  LintRule,
+  LintViolation,
+  LintSeverity,
+} from "../../types.js";
 
 type BlockPolicy = {
   severity: "error" | "warn";
@@ -22,7 +27,7 @@ export const noEmptyManualBlocks: LintRule = {
   name: "no-empty-manual-blocks",
   severity: "warn",
 
-  run(file: LintFile): LintViolation[] {
+  run(file: LintFile, severity: LintSeverity): LintViolation[] {
     const violations: LintViolation[] = [];
 
     for (const [block, policy] of Object.entries(BLOCK_POLICIES)) {
