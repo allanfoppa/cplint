@@ -88,6 +88,8 @@ The engine evaluates developer input following a strict matrix designed to prior
 
 - **`no-empty-manual-blocks`**: Scans the `manual:` block hierarchy. Flags keys that contain empty list placeholders (`- `) so developers remember to provide deep domain constraints or prune them completely to save tokens.
 
+- **`no-stale-context`**: Compares the `generated` date in the `auto.meta` block against the last modified time of the source file. Warns when the source has changed since the context was last generated, preventing the LLM from reasoning over an outdated snapshot. Re-run `context-generate --entrypoint <file>` to resolve.
+
 ### Contributing
 
 Contributions are welcome! To set up `cplint` locally for development:
@@ -95,7 +97,7 @@ Contributions are welcome! To set up `cplint` locally for development:
 1. Clone the repository.
 2. Install standard dependencies: `pnpm install`
 3. Compile the typescript binary using the lightning-fast native engine: `pnpm run build`
-4. Run against any app: `npm link`
+4. To run against any app: `npm link`
 
 ## License
 
