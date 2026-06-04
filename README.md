@@ -63,6 +63,44 @@ Scans your source files using the configured AST adapter and generates optimized
 npx cplint context-generate --entrypoint <path-to-file>
 ```
 
+#### Context Conceptual Explanation
+
+##### Context File Anatomy
+
+Every `*.context.ai.yaml` file balance abstract human knowledge with automated structural intelligence, split into two main root keys:
+
+##### 1. The `manual:` Block (Abstract Context & Business Rules)
+
+This section captures high-level human intent and architectural guardrails that static code analysis cannot infer on its own.
+
+- **`purpose`** (`Mandatory`): **Intent of Existence.** Defines the primary responsibility of the file. It explains why the file exists and what business or architectural problem it solves.
+- **`decisions`** (`Optional`): **Design History.** Records past architectural choices, design patterns, or technical trade-offs. This prevents the LLM from suggesting refactorings that were already intentionally discarded.
+- **`constraints`** (`Optional`): **Hard Boundaries.** Outlines strict technical limitations, security rules, performance requirements, or data formatting standards that the code must adhere to.
+- **`known-pitfalls`** (`Optional`): **Points of Attention.** Warns about tricky edge cases, asynchronous side effects, historical bugs, or logical anti-patterns hiding within the scope of the file.
+- **`not-in-scope`** (`Optional`): **Scope Boundaries.** Explicitly defines what the file does _not_ handle. This prevents scope creep during AI-driven code generation.
+- **`open-questions`** (`Optional`): **Technical Debt & Incertezas.** Logs unresolved architectural concerns, pending design choices, or future refactoring ideas that require upcoming alignment.
+
+##### 2. The `auto:` Block (Technical Metadata & Structure)
+
+Automatically generated via static Abstract Syntax Tree (AST) analysis. It translates complex source code engineering into dense, token-efficient metadata.
+
+###### `meta:` (Global Blueprint)
+
+- **`role`**: **Architectural Role.** The classification of the file within the system's architecture (e.g., presentation layer, state manager, core domain entity, or infrastructure).
+- **`entry`**: **Physical Location.** The exact relative workspace path to the source file within the repository.
+- **`generated`**: **Traceability.** A timestamp indicating exactly when the automation engine last scanned the file.
+- **`related`**: **Semantic Links.** A list of external file paths that operate in tight coupling or close synergy with this file.
+
+###### Structural Body
+
+- **`summary`**: **Executive Summary.** A single-line overview summarizing the nature of the exports and the technical surface discovered.
+- **`entry-points`**: **Access Points.** Lists the names and technical classifications of the main public exports (classes, functions, tokens).
+- **`api-surface`**: **Public Contract.** Maps the strict signature of everything exposed to the outside world. It details method names, input arguments, return types, and properties, tagged with behavior flags.
+- **`deps`**: **Scope Dependencies.** Tracks internal project imports consumed by this file, identifying their architectural roles and the exact symbols brought into scope. Heavy vendor dependencies are stripped to save tokens.
+- **`state-shape`**: **Internal Modeling.** Outlines the schemas, properties, and data types of internal memory, local states, or reactive mechanisms embedded inside the file.
+- **`critical-flow`**: **Linear Execution Chain.** A textual timeline tracing the precise sequential order of internal events, function invocations, and lifecycle hooks.
+- **`change-checklist`**: **Regression Guardrails.** An automated checklist pointing out specific files, pages, or tests that must be reviewed if this file's public contract changes.
+
 #### Run Linter Validations
 
 Validates manual overrides against structural rules. If a mandatory block is empty, or framework modules bleed into the index, the linter will report it.
