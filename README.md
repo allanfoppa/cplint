@@ -78,7 +78,7 @@ This section captures high-level human intent and architectural guardrails that 
 - **`constraints`** (`Optional`): **Hard Boundaries.** Outlines strict technical limitations, security rules, performance requirements, or data formatting standards that the code must adhere to.
 - **`known-pitfalls`** (`Optional`): **Points of Attention.** Warns about tricky edge cases, asynchronous side effects, historical bugs, or logical anti-patterns hiding within the scope of the file.
 - **`not-in-scope`** (`Optional`): **Scope Boundaries.** Explicitly defines what the file does _not_ handle. This prevents scope creep during AI-driven code generation.
-- **`open-questions`** (`Optional`): **Technical Debt & Incertezas.** Logs unresolved architectural concerns, pending design choices, or future refactoring ideas that require upcoming alignment.
+- **`open-questions`** (`Optional`): **Technical Debt & Pending Alignment.** Logs unresolved architectural concerns, pending design choices, or future refactoring ideas that require upcoming alignment.
 
 ##### 2. The `auto:` Block (Technical Metadata & Structure)
 
@@ -96,10 +96,10 @@ Automatically generated via static Abstract Syntax Tree (AST) analysis. It trans
 - **`summary`**: **Executive Summary.** A single-line overview summarizing the nature of the exports and the technical surface discovered.
 - **`entry-points`**: **Access Points.** Lists the names and technical classifications of the main public exports (classes, functions, tokens).
 - **`api-surface`**: **Public Contract.** Maps the strict signature of everything exposed to the outside world. It details method names, input arguments, return types, and properties, tagged with behavior flags.
-- **`deps`**: **Scope Dependencies.** Tracks internal project imports consumed by this file, identifying their architectural roles and the exact symbols brought into scope. Heavy vendor dependencies are stripped to save tokens.
+- **`deps`**: **Scope Dependencies.** Tracks internal project imports consumed by this file, identifying their architectural roles and the exact symbols brought into scope. Type-only and unused imports are excluded to reduce noise.
 - **`state-shape`**: **Internal Modeling.** Outlines the schemas, properties, and data types of internal memory, local states, or reactive mechanisms embedded inside the file.
-- **`critical-flow`**: **Linear Execution Chain.** A textual timeline tracing the precise sequential order of internal events, function invocations, and lifecycle hooks.
-- **`change-checklist`**: **Regression Guardrails.** An automated checklist pointing out specific files, pages, or tests that must be reviewed if this file's public contract changes.
+- **`critical-flow`**: **Linear Execution Chain.** A per-method call graph tracing the sequence of internal function invocations, lifecycle hooks, and side effects triggered from each public entry point.
+- **`change-checklist`**: **Regression Guardrails.** An automated list of files that reference this module's public exports and must be reviewed if the public contract changes.
 
 #### Run Linter Validations
 
