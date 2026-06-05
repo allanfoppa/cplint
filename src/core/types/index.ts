@@ -89,12 +89,18 @@ export const DEFAULT_CONFIG: Config = {
   maxFlowSteps: 8,
   maxReferenceFiles: 8,
   manualDefaults: {
-    purpose: "- ",
-    decisions: "- ",
-    constraints: "- ",
-    "known-pitfalls": "- ",
-    "not-in-scope": "- ",
-    "open-questions": "- ",
+    purpose:
+      "- Required. Main responsibility of this file/component/module; describe what it does and its role in the architecture.",
+    decisions:
+      "- Required. Key architectural/business decisions and rationale that are not obvious from reading the code.",
+    constraints:
+      "- Required. Rules, invariants, contracts, or assumptions that future changes must preserve.",
+    "known-pitfalls":
+      "- Optional. Non-obvious behaviors, edge cases, side effects, performance concerns, or common implementation mistakes; delete if empty.",
+    "not-in-scope":
+      "- Optional. Responsibilities intentionally excluded from this file and handled elsewhere; delete if empty.",
+    "open-questions":
+      "- Optional. Known uncertainties, pending decisions, technical debt, or areas requiring future investigation; delete if empty.",
   },
   classifiers: [],
   importRoleRules: [],

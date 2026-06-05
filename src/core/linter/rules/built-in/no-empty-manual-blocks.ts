@@ -12,8 +12,8 @@ type BlockPolicy = {
 
 const BLOCK_POLICIES: Record<string, BlockPolicy> = {
   purpose: { severity: "error", required: true },
-  decisions: { severity: "warn", required: false },
-  constraints: { severity: "warn", required: false },
+  decisions: { severity: "error", required: true },
+  constraints: { severity: "error", required: true },
   "known-pitfalls": { severity: "warn", required: false },
   "not-in-scope": { severity: "warn", required: false },
   "open-questions": { severity: "warn", required: false },
