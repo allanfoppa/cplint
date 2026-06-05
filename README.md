@@ -128,6 +128,16 @@ The engine evaluates developer input following a strict matrix designed to prior
 
 - **`no-stale-context`**: Compares the `generated` date in the `auto.meta` block against the last modified time of the source file. Warns when the source has changed since the context was last generated, preventing the LLM from reasoning over an outdated snapshot. Re-run `context-generate --entrypoint <file>` to resolve.
 
+#### Compile Context
+
+Reads an existing `*.context.ai.yaml` file from your workspace and prepares a specialized, performance-optimized context output designed specifically to feed the LLM prompt or context window.
+
+```bash
+npx cplint compile <path-to-context-file> [options]
+```
+
+The `context.ia.yaml` is a humam friendly, but, by passing the `--interleave` flag, the CPLint compilation engine structurally transforms the payload in memory before delivering it to the prompt. Instead of sending separate, distant manual and auto blocks, eliminating the **"Lost in the Middle"** effect.
+
 ### Contributing
 
 Contributions are welcome! To set up `cplint` locally for development:
