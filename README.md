@@ -17,11 +17,11 @@ CPLint is a specialized, AST-powered context generator and structural YAML linte
 
 ### Prerequisites
 
-To use CPLint, you must have Node.js (>=24) installed.
+To use CPLint, you must have Node.js (>=20) installed.
 
 Install `cplint` as a development dependency in your project:
 
-If you use CPLint's TypeScript type definitions, TypeScript 5.9.3 or later is required.
+If you use CPLint's TypeScript type definitions, TypeScript 5 or later is required.
 
 ```bash
 npm i --save-dev cplint
@@ -39,7 +39,7 @@ export default {
   // Directories and paths to exclude from indexing
   exclude: ["node_modules", "dist", ".git", "**/*.spec.ts"],
 
-  // Adapter architecture alignment ("node" | "react" | "angular") Defaults to "node"
+  // Adapter architecture alignment ("node" | "react" | "angular") Defaults to "node" if field is ommited
   adapter: "react",
 
   // Linter validation policy engine
@@ -47,6 +47,8 @@ export default {
     rules: {
       // Flags manual description fields that are missing or left uncompleted
       "no-empty-manual-blocks": "error",
+      // Warns when the source has changed since the context was last generated
+      "no-stale-context": "error",
     },
   },
 };
@@ -65,11 +67,9 @@ npx cplint context-generate --entrypoint <path-to-file>
 
 #### Context Conceptual Explanation
 
-##### Context File Anatomy
-
 Every `*.context.ai.yaml` file balance abstract human knowledge with automated structural intelligence, split into two main root keys:
 
-##### 1. The `manual:` Block (Abstract Context & Business Rules)
+The `manual:` Block (Abstract Context & Business Rules)
 
 This section captures high-level human intent and architectural guardrails that static code analysis cannot infer on its own.
 
@@ -80,18 +80,18 @@ This section captures high-level human intent and architectural guardrails that 
 - **`not-in-scope`** (`Optional`): **Scope Boundaries.** Explicitly defines what the file does _not_ handle. This prevents scope creep during AI-driven code generation.
 - **`open-questions`** (`Optional`): **Technical Debt & Pending Alignment.** Logs unresolved architectural concerns, pending design choices, or future refactoring ideas that require upcoming alignment.
 
-##### 2. The `auto:` Block (Technical Metadata & Structure)
+The `auto:` Block (Technical Metadata & Structure)
 
 Automatically generated via static Abstract Syntax Tree (AST) analysis. It translates complex source code engineering into dense, token-efficient metadata.
 
-###### `meta:` (Global Blueprint)
+`meta:` (Global Blueprint)
 
 - **`role`**: **Architectural Role.** The classification of the file within the system's architecture (e.g., presentation layer, state manager, core domain entity, or infrastructure).
 - **`entry`**: **Physical Location.** The exact relative workspace path to the source file within the repository.
 - **`generated`**: **Traceability.** A timestamp indicating exactly when the automation engine last scanned the file.
 - **`related`**: **Semantic Links.** A list of external file paths that operate in tight coupling or close synergy with this file.
 
-###### Structural Body
+`Structural Body:`
 
 - **`summary`**: **Executive Summary.** A single-line overview summarizing the nature of the exports and the technical surface discovered.
 - **`entry-points`**: **Access Points.** Lists the names and technical classifications of the main public exports (classes, functions, tokens).
@@ -116,8 +116,8 @@ The engine evaluates developer input following a strict matrix designed to prior
 | Context State      | Block Condition | Description                                                                                        |
 | ------------------ | --------------- | -------------------------------------------------------------------------------------------------- |
 | **purpose**        | Mandatory       | What the file was created for and its core responsibility.                                         |
-| **decisions**      | Optional        | Architectural choices, pattern adoptions, or trade-offs made within this scope.                    |
-| **constraints**    | Optional        | Technical limitations, performance boundaries, or specific business rules that must be respected.  |
+| **decisions**      | Mandatory       | Architectural choices, pattern adoptions, or trade-offs made within this scope.                    |
+| **constraints**    | Mandatory       | Technical limitations, performance boundaries, or specific business rules that must be respected.  |
 | **known-pitfalls** | Optional        | Edge cases, anti-patterns, common bugs, or tricky behaviors to watch out for during modifications. |
 | **not-in-scope**   | Optional        | Explicit boundaries defining what this file or feature does _not_ handle to avoid scope creep.     |
 | **open-questions** | Optional        | Unresolved issues, pending architectural choices, or design questions requiring future alignment.  |
@@ -128,7 +128,7 @@ The engine evaluates developer input following a strict matrix designed to prior
 
 - **`no-stale-context`**: Compares the `generated` date in the `auto.meta` block against the last modified time of the source file. Warns when the source has changed since the context was last generated, preventing the LLM from reasoning over an outdated snapshot. Re-run `context-generate --entrypoint <file>` to resolve.
 
-#### Compile Context
+### Compile Context
 
 Reads an existing `*.context.ai.yaml` file from your workspace and prepares a specialized, performance-optimized context output designed specifically to feed the LLM prompt or context window.
 
@@ -136,7 +136,7 @@ Reads an existing `*.context.ai.yaml` file from your workspace and prepares a sp
 npx cplint compile <path-to-context-file> [options]
 ```
 
-The `context.ia.yaml` is a humam friendly, but, by passing the `--interleave` flag, the CPLint compilation engine structurally transforms the payload in memory before delivering it to the prompt. Instead of sending separate, distant manual and auto blocks, eliminating the **"Lost in the Middle"** effect.
+The `context.ia.yaml` is a humam friendly, but, by passing the `--interleave` flag, the CPLint compilation engine structurally transforms the payload in memory before delivering it to the prompt. Instead of sending separate, distant manual and auto blocks, trying to eliminate the **"Lost in the Middle"** effect.
 
 ### Contributing
 
