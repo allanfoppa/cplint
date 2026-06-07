@@ -2,7 +2,7 @@ import YAML from "yaml";
 import type { ManualBlocks } from "../../types/index.js";
 
 /**
- * Extracts all MANUAL blocks from an existing .context.ai.yaml file.
+ * Extracts all MANUAL blocks from an existing .cplint.yaml file.
  * Uses YAML.parse for correctness — handles multiline strings, quotes,
  * special characters, and all valid YAML the dev might write.
  */

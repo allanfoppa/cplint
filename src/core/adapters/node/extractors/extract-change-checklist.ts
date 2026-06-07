@@ -7,9 +7,7 @@ export function extractChangeChecklist(
   exported: ReadonlyMap<string, ExportedDeclarations[]>,
   _config: Config,
 ): string[] {
-  const checklist: string[] = [
-    "review dependent callers and tests before changing exported behavior",
-  ];
+  const checklist: string[] = [];
 
   const hasClasses = file.getClasses().length > 0;
   const exportCount = exported.size;

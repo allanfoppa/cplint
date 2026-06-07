@@ -5,7 +5,7 @@
 [![Status: Beta](https://img.shields.io/badge/status-beta-orange.svg?style=flat-square)](#)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 
-CPLint is a specialized, AST-powered context generator and structural YAML linter designed to feed Large Language Models (like Cursor, Copilot, or custom agents) with highly optimized repository metadata. It reduces LLM token consumption by executing static AST analysis (via `ts-morph`), stripping redundant ecosystem boilerplate, and outputting highly structured `*.context.ai.yaml` files.
+CPLint is a specialized, AST-powered context generator and structural YAML linter designed to feed Large Language Models (like Cursor, Copilot, or custom agents) with highly optimized repository metadata. It reduces LLM token consumption by executing static AST analysis (via `ts-morph`), stripping redundant ecosystem boilerplate, and outputting highly structured `*.cplint.yaml` files.
 
 **Inspired by the philosophy and structure of ESLint**, CPLint brings predictable, configuration-driven linting rules to AI context orchestration—ensuring developers document core business rules before sending prompts to the LLM.
 
@@ -58,7 +58,7 @@ export default {
 
 #### Generate Context Files
 
-Scans your source files using the configured AST adapter and generates optimized `*.context.ai.yaml` files.
+Scans your source files using the configured AST adapter and generates optimized `*.cplint.yaml` files.
 
 ```bash
 # Note: you can pass a list of files by separating them with spaces
@@ -67,7 +67,7 @@ npx cplint context-generate --entrypoint <path-to-file>
 
 #### Context Conceptual Explanation
 
-Every `*.context.ai.yaml` file balance abstract human knowledge with automated structural intelligence, split into two main root keys:
+Every `*.cplint.yaml` file balance abstract human knowledge with automated structural intelligence, split into two main root keys:
 
 The `manual:` Block (Abstract Context & Business Rules)
 
@@ -130,7 +130,7 @@ The engine evaluates developer input following a strict matrix designed to prior
 
 ### Compile Context
 
-Reads an existing `*.context.ai.yaml` file from your workspace and prepares a specialized, performance-optimized context output designed specifically to feed the LLM prompt or context window.
+Reads an existing `*.cplint.yaml` file from your workspace and prepares a specialized, performance-optimized context output designed specifically to feed the LLM prompt or context window.
 
 ```bash
 npx cplint compile <path-to-context-file> [options]

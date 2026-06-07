@@ -43,9 +43,7 @@ export function extractChangeChecklist(
   }
 
   if (!refs.size) {
-    return [
-      "review dependent callers and tests before changing exported behavior",
-    ];
+    return [];
   }
 
   return [`review references: ${[...refs].join(", ")}`];

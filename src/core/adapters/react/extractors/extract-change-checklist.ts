@@ -30,7 +30,7 @@ export function extractChangeChecklist(
 
   const checklist = refs.size
     ? [`review references: ${[...refs].join(", ")}`]
-    : ["review dependent callers and tests before changing exported behavior"];
+    : [];
 
   const text = sourceFile.getFullText();
 

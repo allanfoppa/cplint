@@ -1,22 +1,27 @@
 import { Command } from "commander";
 import { contextCompiler } from "../../tools/context-compiler/index.js";
 
-export const compileCommand = new Command("compile-context");
+export const compileCommand = new Command("compile");
 
 compileCommand
-  .argument("<file>", "The *.context.ai.yaml file to compile")
+  .description("Compile a .cplint.yaml into an interleaved, LLM-ready payload")
+  .requiredOption("-f, --file <path>", "Path to the .cplint.yaml file")
   .option(
-    "--interleave",
-    "Optimize position encoding weights by interleaving manual and auto scopes",
-    false,
+    "-i, --interleave",
+    "Interleave manual and auto blocks by symbol scope",
+    true,
   )
-  .action(async (file, options) => {
-    try {
-      const output = await contextCompiler(file, options);
-      console.log(output);
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error);
-      console.error(`❌ Compilation failed: ${message}`);
-      process.exit(1);
+  .option(
+    "-o, --output <path>",
+    "Save compiled output to a file instead of stdout",
+  )
+  .action(async (options) => {
+    const result = await contextCompiler(options.file, {
+      interleave: options.interleave,
+      output: options.output,
+    });
+
+    if (!options.output) {
+      process.stdout.write(result);
     }
   });

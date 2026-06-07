@@ -4,7 +4,7 @@ import { runLint } from "../../tools/linter/index.js";
 export const lintCommand = new Command("lint");
 
 lintCommand
-  .description("Lint .context.ai.yaml files for LLM-consumption anti-patterns")
+  .description("Lint .cplint.yaml files for LLM-consumption anti-patterns")
   .option(
     "--format <format>",
     "Output format: stdout (default) or json",

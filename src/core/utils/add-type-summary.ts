@@ -36,6 +36,10 @@ export function buildSummary(
   role: FileRole,
   _checker: TypeChecker,
 ): string {
+  if (role === "entrypoint") {
+    return "Application entrypoint. Bootstraps the app and wires top-level dependencies.";
+  }
+
   // ── Store: class-based OR functional (NgRx SignalStore, Zustand…) ────────
   // Must come before isClassRole check because "store" was incorrectly
   // included in CLASS_ROLES — functional stores have no exported class.

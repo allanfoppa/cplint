@@ -2,6 +2,7 @@ import { readFileSync } from "fs";
 import fg from "fast-glob";
 import YAML from "yaml";
 import type { LintFile, LintRule, LintViolation } from "../types.js";
+import { normalizePath } from "../../utils/normalize-path.js";
 
 function parseContextFile(path: string, content: string): LintFile {
   const manualBlocks: Record<string, string> = {};
@@ -50,20 +51,16 @@ function parseContextFile(path: string, content: string): LintFile {
 }
 
 export type LintRunnerOptions = {
-  rootPath: string[];
+  rootPath: string;
   exclude: string[];
   rules: LintRule[];
   format: "stdout" | "json";
 };
 
 export function runLintRunner(options: LintRunnerOptions): LintViolation[] {
-  const patterns = options.rootPath.map(
-    (root) => `${root}/**/*.context.ai.yaml`,
-  );
+  const pattern = `${normalizePath(options.rootPath)}/**/*.cplint.yaml`;
 
-  const files = patterns.flatMap((pattern) =>
-    fg.sync(pattern, { ignore: options.exclude }),
-  );
+  const files = fg.sync(pattern, { ignore: options.exclude });
 
   const allViolations: LintViolation[] = [];
 

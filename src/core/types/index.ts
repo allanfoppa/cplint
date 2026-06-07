@@ -2,6 +2,7 @@ import type { Node as MorphNode } from "ts-morph";
 import type { SourceFile, TypeChecker } from "ts-morph";
 
 export type FileRole =
+  | "entrypoint"
   | "guard"
   | "facade"
   | "store"
@@ -83,7 +84,7 @@ export type Config = {
 
 export const DEFAULT_CONFIG: Config = {
   tsConfigFilePath: "tsconfig.json",
-  outputFileName: "{base}.context.ai.yaml",
+  outputFileName: "{base}.cplint.yaml",
   includePrivateTypes: false,
   maxTypeFields: 12,
   maxFlowSteps: 8,

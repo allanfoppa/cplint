@@ -8,7 +8,7 @@ export interface CPLintContextConfig {
   /** Root path to analyze (e.g. ['src/app/features'])
    * - The analyzer will recursively analyze all files under the specified paths.
    */
-  rootPath: string[];
+  rootPath: string;
 
   /**
    * Glob patterns to exclude from analysis (e.g. ['**\/node_modules\/**', '**\/*.spec.ts'])
@@ -82,8 +82,8 @@ function handleConfigNotFound(cwd: string): never {
   💡 Example (cplint.config.ts):
 
     export default {
-      rootPath: ['src/app/features'],
-      adapter: 'angular',
+      rootPath: 'src/app/features',
+      adapter: 'react',
       lint: {
         rules: {
           'no-cross-feature-import': 'error',

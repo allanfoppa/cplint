@@ -12,6 +12,8 @@ const HTTP_FRAMEWORK_MODULES = [
 export function classifyNodeFile(file: SourceFile): FileRole {
   const base = file.getBaseNameWithoutExtension().toLowerCase();
 
+  if (base === "main" || base === "index") return "entrypoint";
+
   // ── Name-suffix heuristics ───────────────────────────────────────────────
   if (base.endsWith(".routes") || base.endsWith(".router")) return "routes";
   if (base.endsWith(".model") || base.endsWith(".models")) return "model";

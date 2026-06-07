@@ -34,7 +34,7 @@ export async function runLint(options: LintOptions = {}): Promise<void> {
   const rules = resolveRules(options.legacyRules ?? false, config.lint.rules);
 
   const violations = runLintRunner({
-    rootPath: config.rootPath ?? ["src/"],
+    rootPath: config.rootPath ?? "src/",
     exclude: config.exclude ?? ["node_modules", "dist", ".git"],
     rules,
     format: options.format ?? "stdout",

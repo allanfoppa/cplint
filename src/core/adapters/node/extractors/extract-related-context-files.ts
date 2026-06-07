@@ -17,8 +17,8 @@ export function extractRelatedContextFiles(
 
     const resolved = path.resolve(dir, module);
     const candidates = [
-      `${resolved}.context.ai.yaml`,
-      `${resolved}/index.context.ai.yaml`,
+      `${resolved}.cplint.yaml`,
+      `${resolved}/index.cplint.yaml`,
     ];
 
     for (const candidate of candidates) {
