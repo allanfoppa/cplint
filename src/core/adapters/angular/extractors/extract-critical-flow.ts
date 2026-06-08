@@ -10,6 +10,7 @@ import { getDisplayName } from "../../../utils/get-display-name.js";
 import { pickPrimaryExport } from "../../../utils/pick-primary-export.js";
 import { getFunctionLikeNode } from "../../../utils/get-function-like-node.js";
 import { describeCall } from "../../../utils/describe-call.js";
+import { isPrimitiveCall } from "../../../utils/is-primitive-call.js";
 
 export function extractCriticalFlow(
   exported: ReadonlyMap<string, MorphNode[]>,
@@ -21,12 +22,10 @@ export function extractCriticalFlow(
 
   const rootName = getDisplayName(primary.exportName, primary.decl);
 
-  // ── Class: one flow per public method ────────────────────────────────────
   if (Node.isClassDeclaration(primary.decl)) {
     return extractClassFlows(rootName, primary.decl, checker, config);
   }
 
-  // ── Function / arrow: single linear flow ─────────────────────────────────
   const fnNode = getFunctionLikeNode(primary.decl);
   if (!fnNode) return [];
 
@@ -51,7 +50,9 @@ function extractClassFlows(
   for (const method of methods) {
     const methodName = `${className}.${method.getName()}`;
     const calls = extractCallsFromNode(method, checker, config);
-    const meaningful = calls.filter((c) => !isAngularNoise(c));
+    const meaningful = calls.filter(
+      (c) => !isAngularNoise(c) && !isPrimitiveCall(c),
+    );
     if (!meaningful.length) continue;
     flows.push(`${methodName} -> ${meaningful.join(" -> ")}`);
   }
@@ -70,7 +71,13 @@ function extractStepsFromNode(
 
   for (const call of node.getDescendantsOfKind(SyntaxKind.CallExpression)) {
     const step = describeCall(call, checker, config);
-    if (!step || seen.has(step) || isAngularNoise(step)) continue;
+    if (
+      !step ||
+      seen.has(step) ||
+      isAngularNoise(step) ||
+      isPrimitiveCall(step)
+    )
+      continue;
     seen.add(step);
     steps.push(step);
     if (steps.length >= config.maxFlowSteps) break;

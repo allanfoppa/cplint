@@ -1,10 +1,10 @@
 import { Node, SyntaxKind } from "ts-morph";
 import type { Node as MorphNode, TypeChecker } from "ts-morph";
 import type { Config } from "../../../types/index.js";
-import { firstExportDecls } from "../../../utils/first-export-decls.js";
 import { getDisplayName } from "../../../utils/get-display-name.js";
 import { pickPrimaryExport } from "../../../utils/pick-primary-export.js";
 import { describeCall } from "../../../utils/describe-call.js";
+import { isPrimitiveCall } from "../../../utils/is-primitive-call.js";
 
 export function extractCriticalFlow(
   exported: ReadonlyMap<string, MorphNode[]>,
@@ -15,21 +15,16 @@ export function extractCriticalFlow(
   if (!primary) return [];
 
   const name = getDisplayName(primary.exportName, primary.decl);
-
-  // Get the function body — handles both `function Foo` and `const Foo = () =>`
   const fnNode = getFnNode(primary.decl);
   if (!fnNode) return [];
 
   const steps: string[] = [name];
   const seen = new Set<string>([name]);
 
-  const calls = fnNode.getDescendantsOfKind(SyntaxKind.CallExpression);
-
-  for (const call of calls) {
+  for (const call of fnNode.getDescendantsOfKind(SyntaxKind.CallExpression)) {
     const callText = call.getExpression().getText();
 
-    // Skip React internals that add noise without signal
-    if (isReactNoise(callText)) continue;
+    if (isReactNoise(callText) || isPrimitiveCall(callText)) continue;
 
     const step = describeCall(call, checker, config);
     if (!step || seen.has(step)) continue;

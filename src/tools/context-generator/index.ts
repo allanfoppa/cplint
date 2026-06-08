@@ -1,5 +1,6 @@
 import path from "node:path";
 import fs from "node:fs";
+import fg from "fast-glob";
 import { normalizePath } from "../../core/utils/normalize-path.js";
 import { extractManualBlocks } from "../../core/context-generator/renderers/extract-manual-blocks.js";
 import { loadConfig } from "../../config/load-config.js";
@@ -16,8 +17,14 @@ import { resolveAdapter } from "../../core/utils/resolve-adapter.js";
 import { resolveEntrypoint } from "../../core/utils/resolve-entrypoint.js";
 
 type GenerateContextOptions = {
-  entrypoint: string[];
-  diagrams?: boolean;
+  entrypoint?: string[];
+  all?: boolean;
+};
+
+type BatchResult = {
+  generated: string[];
+  skipped: string[]; // role: unknown
+  failed: { file: string; error: string }[];
 };
 
 export async function contextGenerator(
@@ -26,30 +33,121 @@ export async function contextGenerator(
   const config = await loadConfig();
   const adapter = await resolveAdapter(config.adapter);
 
+  console.log(`\n🔌 Adapter: ${adapter.name}`);
+
+  // ── Batch mode: --all ────────────────────────────────────────────────────
+  if (options.all) {
+    await generateAll(adapter, config, options);
+    return;
+  }
+
+  // ── Single / multi entrypoint mode ───────────────────────────────────────
+  if (!options.entrypoint?.length) {
+    console.error(
+      "❌ Provide --entrypoint <file> or use --all to scan rootPath.",
+    );
+    process.exit(1);
+  }
+
   const resolved = options.entrypoint.map((e) =>
     resolveEntrypoint(config.rootPath, e),
   );
 
-  console.log(`\n🔌 Adapter: ${adapter.name}`);
   console.log(`📂 Entrypoints (${resolved.length}):\n`);
 
   for (const entrypoint of resolved) {
-    await generate(entrypoint, adapter, {
-      diagram: options.diagrams,
-    });
+    await generate(entrypoint, adapter, { _silent: true });
   }
+}
+
+async function generateAll(
+  adapter: CPLintAdapter,
+  config: Awaited<ReturnType<typeof loadConfig>>,
+  options: GenerateContextOptions,
+): Promise<void> {
+  const exclude = config.exclude ?? ["node_modules", "dist", ".git"];
+
+  // Collect all .ts/.tsx files under rootPath
+  const pattern = `${normalizePath(config.rootPath)}/**/*.{ts,tsx}`;
+  const files = fg.sync(pattern, {
+    ignore: [
+      ...exclude,
+      "**/*.spec.ts",
+      "**/*.test.ts",
+      "**/*.spec.tsx",
+      "**/*.test.tsx",
+      "**/*.d.ts",
+      "**/*.cplint.yaml", // never process the context files themselves
+    ],
+  });
+
+  if (!files.length) {
+    console.log(`⚠ No TypeScript files found under "${config.rootPath}".`);
+    return;
+  }
+
+  console.log(`📂 Found ${files.length} file(s) under "${config.rootPath}".\n`);
+
+  const result: BatchResult = { generated: [], skipped: [], failed: [] };
+  const startTime = Date.now();
+
+  for (const file of files) {
+    try {
+      const context = await generate(file, adapter, {
+        _silent: true, // suppress per-file ✔ log in batch mode
+      });
+
+      if (context?.role === "unknown") {
+        result.skipped.push(file);
+        console.log(`⚠ Skipped (unknown role): ${normalizePath(file)}`);
+      } else {
+        result.generated.push(file);
+        console.log(`✔ ${normalizePath(file)}`);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      result.failed.push({ file, error: message });
+      console.log(`✖ Failed: ${normalizePath(file)}`);
+    }
+  }
+
+  const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+
+  console.log(`\n${"─".repeat(50)}`);
+  console.log(`✔ Generated : ${result.generated.length} file(s)`);
+
+  if (result.skipped.length) {
+    console.log(
+      `⚠ Skipped   : ${result.skipped.length} file(s) — role: unknown`,
+    );
+    console.log(
+      `  Tip: add a known suffix (.service.ts, .util.ts, .hook.ts, .store.ts) `,
+      // TODO: add more suffixes or make them configurable in cplint.config.js
+      // `or configure custom classifiers in cplint.config.js.`,
+    );
+  }
+
+  if (result.failed.length) {
+    console.log(`✖ Failed    : ${result.failed.length} file(s)`);
+    for (const { file, error } of result.failed) {
+      console.log(`  • ${normalizePath(file)}: ${error}`);
+    }
+  }
+
+  console.log(`⏱ Time      : ${elapsed}s`);
 }
 
 export async function generate(
   entrypoint: string,
   adapter: CPLintAdapter,
-  configOverrides: Partial<Config> = {},
-): Promise<void> {
+  configOverrides: Partial<Config> & { _silent?: boolean } = {},
+): Promise<{ role: string } | undefined> {
   if (!entrypoint) {
-    throw new Error("Usage: cplint generate-context --entrypoint <entry-file>");
+    throw new Error("Usage: cplint generate --entrypoint <entry-file>");
   }
 
-  const config: Config = { ...DEFAULT_CONFIG, ...configOverrides };
+  const { _silent, ...rest } = configOverrides;
+  const config: Config = { ...DEFAULT_CONFIG, ...rest };
 
   const project = new Project({
     tsConfigFilePath: path.resolve(process.cwd(), config.tsConfigFilePath),
@@ -67,6 +165,14 @@ export async function generate(
   const checker = project.getTypeChecker();
   const context = buildContext({ sourceFile, checker, config, adapter });
 
+  // Warn when classifier could not resolve the role
+  if (context.role === "unknown") {
+    console.warn(
+      `⚠ [CPLint] role: unknown for "${normalizePath(entrypoint)}" — context may be inaccurate. ` +
+        `Check the classifier or rename the file with a known suffix.`,
+    );
+  }
+
   const outputPath = getOutputPath(sourceFile.getFilePath(), config);
   const existing = fs.existsSync(outputPath)
     ? fs.readFileSync(outputPath, "utf8")
@@ -76,5 +182,10 @@ export async function generate(
   const nextDoc = renderDocument(context, config, manualBlocks, sourceFile);
 
   fs.writeFileSync(outputPath, nextDoc, "utf8");
-  console.log(`✔ Wrote ${normalizePath(outputPath)}`);
+
+  if (!_silent) {
+    console.log(`✔ Wrote ${normalizePath(outputPath)}`);
+  }
+
+  return { role: context.role };
 }

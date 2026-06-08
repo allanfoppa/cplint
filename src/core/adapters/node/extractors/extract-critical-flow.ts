@@ -6,6 +6,7 @@ import type {
 } from "ts-morph";
 import type { Config } from "../../../types/index.js";
 import { getDisplayName } from "../../../utils/get-display-name.js";
+import { isPrimitiveCall } from "../../../utils/is-primitive-call.js";
 
 export function extractCriticalFlow(
   exported: ReadonlyMap<string, ExportedDeclarations[]>,
@@ -61,6 +62,7 @@ function extractCallsFromBody(
       .forEach((call: any) => {
         const text = call.getExpression().getText();
         if (seen.has(text) || text.length > 60) return;
+        if (isPrimitiveCall(text)) return;
         seen.add(text);
 
         const signature = checker.getResolvedSignature(call);
