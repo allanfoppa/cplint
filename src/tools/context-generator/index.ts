@@ -13,7 +13,7 @@ import { Project } from "ts-morph";
 import { buildContext } from "../../core/context-generator/build-context.js";
 import { getOutputPath } from "../../core/utils/get-output-path.js";
 import { renderDocument } from "../../core/context-generator/renderers/render-document.js";
-import { resolveAdapter } from "../../core/utils/resolve-adapter.js";
+import { resolveAdapter } from "../../adapters/resolve-adapter.js";
 import { resolveEntrypoint } from "../../core/utils/resolve-entrypoint.js";
 
 type GenerateContextOptions = {
