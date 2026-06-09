@@ -68,21 +68,27 @@ async function generateAll(
   const exclude = config.exclude ?? ["node_modules", "dist", ".git"];
 
   // Collect all .ts/.tsx files under rootPath
-  const pattern = `${normalizePath(config.rootPath)}/**/*.{ts,tsx}`;
+  const pattern = `${normalizePath(config.rootPath)}/**/*.{js,jsx,ts,tsx}`;
   const files = fg.sync(pattern, {
     ignore: [
       ...exclude,
+      "**/*.spec.js",
       "**/*.spec.ts",
+      "**/*.test.js",
       "**/*.test.ts",
       "**/*.spec.tsx",
       "**/*.test.tsx",
+      "**/*.spec.jsx",
+      "**/*.test.jsx",
       "**/*.d.ts",
       "**/*.cplint.yaml", // never process the context files themselves
     ],
   });
 
   if (!files.length) {
-    console.log(`⚠ No TypeScript files found under "${config.rootPath}".`);
+    console.log(
+      `⚠ No Javascript or TypeScript files found under "${config.rootPath}".`,
+    );
     return;
   }
 
@@ -121,7 +127,7 @@ async function generateAll(
       `⚠ Skipped   : ${result.skipped.length} file(s) — role: unknown`,
     );
     console.log(
-      `  Tip: add a known suffix (.service.ts, .util.ts, .hook.ts, .store.ts) `,
+      `  Tip       : Add a known suffix (.service.ts, .util.ts, .hook.ts, .store.ts) `,
       // TODO: add more suffixes or make them configurable in cplint.config.js
       // `or configure custom classifiers in cplint.config.js.`,
     );
@@ -149,10 +155,8 @@ export async function generate(
   const { _silent, ...rest } = configOverrides;
   const config: Config = { ...DEFAULT_CONFIG, ...rest };
 
-  const project = new Project({
-    tsConfigFilePath: path.resolve(process.cwd(), config.tsConfigFilePath),
-    skipAddingFilesFromTsConfig: false,
-  });
+  const tsConfigPath = path.resolve(process.cwd(), config.tsConfigFilePath);
+  const project = createProject(tsConfigPath);
 
   const sourceFile =
     project.getSourceFile(entrypoint) ||
@@ -188,4 +192,19 @@ export async function generate(
   }
 
   return { role: context.role };
+}
+
+function createProject(tsconfig: string): Project {
+  if (fs.existsSync(tsconfig)) {
+    return new Project({
+      tsConfigFilePath: tsconfig,
+    });
+  }
+
+  return new Project({
+    compilerOptions: {
+      allowJs: true,
+      checkJs: true,
+    },
+  });
 }

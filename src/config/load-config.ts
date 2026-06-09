@@ -18,10 +18,9 @@ export interface CPLintContextConfig {
   /**
    * Adapter to use for semantic analysis.
    * - String shorthand: 'angular' | 'react' | 'node'
-   * - Object: any CPLintAdapter implementation
    * - Omit: defaults to 'node'
    */
-  adapter?: string | CPLintAdapter;
+  adapter?: string;
 
   /**
    * Linter configuration.
@@ -32,10 +31,10 @@ export interface CPLintContextConfig {
 }
 
 const CONFIG_FILES = [
-  { name: "cplint.config.ts", type: "module" },
-  { name: "cplint.config.mjs", type: "module" },
   { name: "cplint.config.js", type: "module" },
+  { name: "cplint.config.mjs", type: "module" },
   { name: "cplint.config.cjs", type: "commonjs" },
+  { name: "cplint.config.ts", type: "module" },
   { name: "cplint.config.json", type: "json" },
 ] as const;
 
