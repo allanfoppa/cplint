@@ -1,52 +1,23 @@
 {
-  "name": "cplint",
+  "name": "cplint-monorepo",
   "version": "0.1.0",
-  "author": "Allan Foppa Fagundes <allanfoppa.dev@gmail.com>",
-  "description": "AST-based semantic linting and context optimization tooling for AI-assisted development.",
-  "keywords": [
-    "ast",
-    "typescript",
-    "semantic-analysis",
-    "llm",
-    "ai",
-    "context-engineering",
-    "token-optimization",
-    "vertical-slice",
-    "architecture",
-    "co-location",
-    "developer-tools"
-  ],
-  "license": "MIT",
-  "type": "module",
-  "bin": {
-    "cplint": "./dist/main.js"
-  },
-  "scripts": {
-    "dev": "tsx src/main.ts",
-    "build": "pnpm typecheck && tsdown",
-    "test": "vitest",
-    "start": "node dist/main.js",
-    "typecheck": "tsc --noEmit",
-    "prepublishOnly": "pnpm run build"
-  },
+  "private": true,
   "packageManager": "pnpm@11.0.9",
-  "dependencies": {
-    "commander": "^14.0.3",
-    "fast-glob": "^3.3.3",
-    "ts-morph": "^28.0.0",
-    "yaml": "^2.9.0"
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint:exports": "pnpm -r --parallel exec publint",
+    "lint:deps": "dependency-cruiser --config .dependency-cruiser.cjs packages",
+    "build": "pnpm typecheck && pnpm lint:exports && pnpm lint:deps && pnpm --filter \"@cplint/adapter-*\" run build && pnpm --filter cplint run build"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=11.0.9"
   },
   "devDependencies": {
     "@types/node": "^25.6.2",
     "dependency-cruiser": "^17.4.3",
-    "tsdown": "^0.22.0",
+    "publint": "^0.3.21",
     "tsx": "^4.21.0",
-    "typescript": "^5.9.3",
-    "vitest": "^4.1.5"
-  },
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
-  ]
+    "typescript": "^5.9.3"
+  }
 }

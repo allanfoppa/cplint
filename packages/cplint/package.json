@@ -1,0 +1,68 @@
+{
+  "name": "cplint",
+  "version": "0.1.0",
+  "author": "Allan Foppa Fagundes <allanfoppa.dev@gmail.com>",
+  "description": "AST-based semantic linting and context optimization tooling for AI-assisted development.",
+  "main": "./dist/index.js",
+  "exports": {
+    ".": "./dist/index.js",
+    "./cli": "./dist/main.js"
+  },
+  "keywords": [
+    "ast",
+    "typescript",
+    "semantic-analysis",
+    "llm",
+    "ai",
+    "context-engineering",
+    "token-optimization",
+    "vertical-slice",
+    "architecture",
+    "co-location",
+    "developer-tools"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "cplint": "./dist/main.js"
+  },
+  "scripts": {
+    "dev": "tsx src/main.ts",
+    "build": "tsdown",
+    "test": "vitest",
+    "start": "node dist/main.js",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm run build"
+  },
+  "packageManager": "pnpm@11.0.9",
+  "dependencies": {
+    "@cplint/adapter-node": "workspace:*",
+    "commander": "^14.0.3",
+    "fast-glob": "^3.3.3",
+    "ts-morph": "^28.0.0",
+    "yaml": "^2.9.0"
+  },
+  "peerDependencies": {
+    "@cplint/adapter-angular": "workspace:*",
+    "@cplint/adapter-react": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@cplint/adapter-angular": {
+      "optional": true
+    },
+    "@cplint/adapter-react": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@cplint/adapter-angular": "workspace:*",
+    "@cplint/adapter-react": "workspace:*",
+    "tsdown": "^0.22.0",
+    "vitest": "^4.1.5"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ]
+}

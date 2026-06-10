@@ -8,9 +8,12 @@
         "skipLibCheck": true,
         "types": [
             "node"
-        ]
+        ],
     },
     "include": [
-        "src"
+        "packages/cplint/src/**/*",
+        "packages/adapter-angular/src/**/*",
+        "packages/adapter-react/src/**/*",
+        "packages/adapter-node/src/**/*"
     ]
 }

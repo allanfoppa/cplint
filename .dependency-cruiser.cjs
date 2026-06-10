@@ -2,12 +2,16 @@ module.exports = {
   forbidden: [
     {
       name: "core-cannot-import-adapters",
+      severity: "error",
+      comment:
+        "The core cplint package must never import logic from adapter packages, except inside resolve-adapter.",
       from: {
-        path: "^src/core",
+        path: "^packages/cplint",
+        pathNot: "^packages/cplint/src/adapters-in/resolve-adapter\\.ts",
       },
       to: {
-        path: "^src/adapters",
-        // path: "^src/adapters/@", --- IGNORED FOR NOW ---
+        path: "^packages/adapter-",
+        dependencyTypesNot: ["type-only"],
       },
     },
     {
@@ -29,6 +33,12 @@ module.exports = {
   ],
 
   options: {
+    exclude: {
+      path: ["node_modules", "\\.config\\.ts$", "\\.dependency-cruiser\\.cjs$"],
+    },
+    doNotFollow: {
+      path: "(/dist/)",
+    },
     tsPreCompilationDeps: true,
     tsConfig: {
       fileName: "tsconfig.json",
