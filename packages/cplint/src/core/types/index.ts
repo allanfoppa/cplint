@@ -2,6 +2,13 @@ import type { Node as MorphNode } from "ts-morph";
 import type { SourceFile, TypeChecker } from "ts-morph";
 
 export type FileRole =
+  | "constants"
+  | "event"
+  | "factory"
+  | "plugin"
+  | "schema"
+  | "decorator"
+  | "middleware"
   | "entrypoint"
   | "guard"
   | "facade"
@@ -9,12 +16,14 @@ export type FileRole =
   | "context"
   | "service"
   | "component"
+  | "config"
   | "page"
   | "hook"
   | "controller"
   | "repository"
   | "pipe"
   | "directive"
+  | "types"
   | "routes"
   | "model"
   | "util"
