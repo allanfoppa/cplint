@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { CPLintAdapter } from "../core/types/index.js";
 import type { RulesConfig } from "../core/linter/types.js";
+import { exitWithError } from "../core/utils/errors.js";
 
 export interface CPLintContextConfig {
   /** Root path to analyze (e.g. ['src/app/features'])
@@ -59,7 +60,7 @@ export async function loadConfig(): Promise<CPLintContextConfig> {
     }
   }
 
-  handleConfigNotFound(cwd);
+  exitWithError("CONFIG_NOT_FOUND");
 }
 
 async function fileExists(path: string): Promise<boolean> {
@@ -69,26 +70,4 @@ async function fileExists(path: string): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-function handleConfigNotFound(cwd: string): never {
-  console.error(`
-  ❌ CPLint config not found
-
-  👉 Expected: cplint.config.ts, .js, .mjs, .cjs or .json
-  📍 Location: ${cwd}
-
-  💡 Example (cplint.config.ts):
-
-    export default {
-      rootPath: 'src/app/features',
-      adapter: 'react',
-      lint: {
-        rules: {
-          'no-cross-feature-import': 'error',
-        }
-      }
-    }
-  `);
-  process.exit(1);
 }

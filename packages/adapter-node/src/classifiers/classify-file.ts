@@ -208,14 +208,6 @@ export function classifyNodeFile(file: SourceFile): FileRole {
     return "controller";
   }
 
-  // ── Hook pattern: named `use*` functions or arrow functions ──────────────
-  for (const fn of file.getFunctions()) {
-    if (/^use[A-Z]/.test(fn.getName() ?? "")) return "hook";
-  }
-  for (const name of getExportedArrowFunctionNames(file)) {
-    if (/^use[A-Z]/.test(name)) return "hook";
-  }
-
   // ── Type-only file ───────────────────────────────────────────────────────
   if (isTypeOnlyFile(file)) return "types";
 

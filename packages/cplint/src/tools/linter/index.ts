@@ -2,6 +2,7 @@ import { loadConfig } from "../../config/load-config.js";
 import { resolveRules } from "../../core/linter/rules/registry.js";
 import { runLintRunner } from "../../core/linter/runner/lint-runner.js";
 import { report } from "../../core/linter/runner/reporter.js";
+import { exitWithError } from "../../core/utils/errors.js";
 
 type LintOptions = {
   format?: "stdout" | "json";
@@ -12,23 +13,7 @@ export async function runLint(options: LintOptions = {}): Promise<void> {
   const config = await loadConfig();
 
   if (!config.lint?.rules || !Object.keys(config.lint.rules).length) {
-    console.error(`
-  ❌ No lint rules configured.
-
-  💡 Add rules to your cplint.config.ts:
-
-    export default {
-      rootPath: ['src/app/features'],
-      adapter: 'angular',
-      lint: {
-        rules: {
-          'no-cross-feature-import': 'error',
-          'no-empty-manual-blocks': 'warn',
-        }
-      }
-    }
-    `);
-    process.exit(1);
+    exitWithError("NO_RULES_CONFIGURED");
   }
 
   const rules = resolveRules(options.legacyRules ?? false, config.lint.rules);
