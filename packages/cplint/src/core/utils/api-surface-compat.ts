@@ -8,9 +8,29 @@ export function buildApiRow(opts: {
   flags?: string[];
 }): ApiSurfaceRow {
   const { name, kind, type, params = "", flags = [] } = opts;
-  const signature = buildSignature(name, kind, type, params);
+  const signature = buildSignature(name, kind, type, normalizeParams(params));
   const allFlags = [kind, "exported", ...flags].filter(Boolean);
   return { name, signature, flags: allFlags };
+}
+
+/**
+ * Flattens multiline parameter strings (as extracted by ts-morph from
+ * destructured or formatted function signatures) into a single line.
+ *
+ * Without this, signatures like:
+ *   Layout({
+ *     header,
+ *     navbar,
+ *   }: LayoutProps) → string
+ *
+ * produce invalid YAML when serialized as a quoted scalar.
+ */
+function normalizeParams(params: string): string {
+  return params
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .join(" ");
 }
 
 function buildSignature(
@@ -27,16 +47,14 @@ function buildSignature(
 
     case "component":
     case "page":
-      // Angular class: type === name (class name passed as type)
-      // React function: type is "JSX.Element" or params contains props
       if (type === name || (!params && type !== "JSX.Element")) {
-        return name; // Angular — no call signature
+        return name;
       }
       return params
         ? `${name}({ ${params} }) → JSX.Element`
         : `${name}() → JSX.Element`;
 
-    // Angular / Node class-based roles — no call signature
+    // Class-based roles — no call signature
     case "facade":
     case "service":
     case "guard":

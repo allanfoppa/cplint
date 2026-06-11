@@ -3,12 +3,14 @@ import type { RulesConfig } from "../types.js";
 import { noEmptyManualBlocks } from "./built-in/no-empty-manual-blocks.js";
 import { noEmptyPurpose } from "./built-in/no-empty-purpose.js";
 import { noStaleContext } from "./built-in/no-stale-context.js";
+import { preferExplicitRole } from "./built-in/prefer-explicit-role.js";
 
 export type { RulesConfig };
 
 const BUILT_IN: Record<string, LintRule> = {
   "no-empty-manual-blocks": noEmptyManualBlocks,
   "no-stale-context": noStaleContext,
+  "prefer-explicit-role": preferExplicitRole,
 };
 
 const LEGACY: Record<string, LintRule> = {

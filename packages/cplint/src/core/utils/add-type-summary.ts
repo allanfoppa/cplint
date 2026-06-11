@@ -191,11 +191,20 @@ function buildFunctionalStoreSummary(sourceFile: SourceFile): string {
   return "Exported functional store. Manages application state.";
 }
 
+/**
+ * Collapses any whitespace sequences (including newlines from ts-morph's
+ * raw source text) into a single space. Applied to every string that may
+ * originate from AST getText() calls before embedding in YAML scalars.
+ */
+function normalizeInlineText(text: string): string {
+  return text.replace(/\s+/g, " ").trim();
+}
+
 function buildParamsSummary(fn: { getParameters: () => any[] }): string {
   try {
     const params = fn.getParameters().map((p: any) => {
-      const name = p.getName();
-      const type = p.getTypeNode()?.getText() ?? "unknown";
+      const name = normalizeInlineText(p.getName());
+      const type = normalizeInlineText(p.getTypeNode()?.getText() ?? "unknown");
       return `\`${name}: ${type}\``;
     });
     return params.length ? `Receives ${params.join(", ")}. ` : "";

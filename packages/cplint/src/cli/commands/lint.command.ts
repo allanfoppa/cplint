@@ -15,4 +15,9 @@ lintCommand
     "Include legacy rule aliases (e.g. no-empty-purpose)",
     false,
   )
+  .option(
+    "--strict-roles",
+    "Enable prefer-explicit-role rule: warn when role was inferred from export shape instead of filename suffix",
+    false,
+  )
   .action(async (options) => runLint(options));
