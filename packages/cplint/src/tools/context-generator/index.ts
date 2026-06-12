@@ -152,6 +152,14 @@ export async function generate(
     throw new Error("Usage: cplint generate --entrypoint <entry-file>");
   }
 
+  // ── Quick skip for test files in single entrypoint mode ───────────────────
+  const isTestFile = /\.(spec|test)\.[a-z]+$/.test(entrypoint.toLowerCase());
+  if (isTestFile) {
+    throw new Error(
+      `ℹ Skipped: "${normalizePath(entrypoint)}" is a test file.`,
+    );
+  }
+
   const { _silent, ...rest } = configOverrides;
   const config: Config = { ...DEFAULT_CONFIG, ...rest };
 
