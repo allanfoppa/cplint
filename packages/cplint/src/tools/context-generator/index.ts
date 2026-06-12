@@ -15,6 +15,7 @@ import { getOutputPath } from "../../core/utils/get-output-path.js";
 import { renderDocument } from "../../core/context-generator/renderers/render-document.js";
 import { resolveAdapter } from "../../adapters-in/resolve-adapter.js";
 import { resolveEntrypoint } from "../../core/utils/resolve-entrypoint.js";
+import { exitWithError } from "../../core/utils/errors.js";
 
 type GenerateContextOptions = {
   entrypoint?: string[];
@@ -43,10 +44,7 @@ export async function contextGenerator(
 
   // ── Single / multi entrypoint mode ───────────────────────────────────────
   if (!options.entrypoint?.length) {
-    console.error(
-      "❌ Provide --entrypoint <file> or use --all to scan rootPath.",
-    );
-    process.exit(1);
+    exitWithError("NO_PROVIDED_ENTRYPOINT");
   }
 
   const resolved = options.entrypoint.map((e) =>

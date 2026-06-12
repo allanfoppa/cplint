@@ -1,4 +1,8 @@
 export const CLI_MESSAGES = {
+  NO_PROVIDED_ENTRYPOINT: `
+  ❌ Provide --entrypoint <file> or use --all to scan rootPath.
+  `,
+
   NO_RULES_CONFIGURED: `
   ❌ No lint rules configured.
 

@@ -1,5 +1,6 @@
 import { Command } from "commander";
 import { contextGenerator } from "../../tools/context-generator/index.js";
+import { exitWithError } from "../../core/utils/errors.js";
 
 export const contextCommand = new Command("generate");
 
@@ -14,10 +15,7 @@ contextCommand
   )
   .action((options) => {
     if (!options.entrypoint && !options.all) {
-      console.error(
-        "❌ Provide --entrypoint <file> or --all to scan rootPath.",
-      );
-      process.exit(1);
+      exitWithError("NO_PROVIDED_ENTRYPOINT");
     }
     contextGenerator(options);
   });

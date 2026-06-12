@@ -1,9 +1,9 @@
-import { access, readFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import type { CPLintAdapter } from "../core/types/index.js";
 import type { RulesConfig } from "../core/linter/types.js";
 import { exitWithError } from "../core/utils/errors.js";
+import { fileExists } from "../core/utils/file-exists.js";
 
 export interface CPLintContextConfig {
   /** Root path to analyze (e.g. ['src/app/features'])
@@ -61,13 +61,4 @@ export async function loadConfig(): Promise<CPLintContextConfig> {
   }
 
   exitWithError("CONFIG_NOT_FOUND");
-}
-
-async function fileExists(path: string): Promise<boolean> {
-  try {
-    await access(path);
-    return true;
-  } catch {
-    return false;
-  }
 }
