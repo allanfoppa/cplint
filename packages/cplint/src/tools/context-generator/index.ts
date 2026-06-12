@@ -9,13 +9,13 @@ import {
   CPLintAdapter,
   DEFAULT_CONFIG,
 } from "../../core/types/index.js";
-import { Project } from "ts-morph";
 import { buildContext } from "../../core/context-generator/build-context.js";
 import { getOutputPath } from "../../core/utils/get-output-path.js";
 import { renderDocument } from "../../core/context-generator/renderers/render-document.js";
 import { resolveAdapter } from "../../adapters-in/resolve-adapter.js";
 import { resolveEntrypoint } from "../../core/utils/resolve-entrypoint.js";
 import { exitWithError } from "../../core/utils/errors.js";
+import { createProject } from "../../core/utils/create-project.js";
 
 type GenerateContextOptions = {
   entrypoint?: string[];
@@ -64,22 +64,13 @@ async function generateAll(
   options: GenerateContextOptions,
 ): Promise<void> {
   const exclude = config.exclude ?? ["node_modules", "dist", ".git"];
-
-  // Collect all .ts/.tsx files under rootPath
   const pattern = `${normalizePath(config.rootPath)}/**/*.{js,jsx,ts,tsx}`;
   const files = fg.sync(pattern, {
     ignore: [
       ...exclude,
-      "**/*.spec.js",
-      "**/*.spec.ts",
-      "**/*.test.js",
-      "**/*.test.ts",
-      "**/*.spec.tsx",
-      "**/*.test.tsx",
-      "**/*.spec.jsx",
-      "**/*.test.jsx",
+      "**/*.{spec,test}.{js,jsx,ts,tsx}",
       "**/*.d.ts",
-      "**/*.cplint.yaml", // never process the context files themselves
+      "**/*.cplint.yaml",
     ],
   });
 
@@ -125,9 +116,7 @@ async function generateAll(
       `⚠ Skipped   : ${result.skipped.length} file(s) — role: unknown`,
     );
     console.log(
-      `  Tip       : Add a known suffix (.service.ts, .util.ts, .hook.ts, .store.ts) `,
-      // TODO: add more suffixes or make them configurable in cplint.config.js
-      // `or configure custom classifiers in cplint.config.js.`,
+      `  Tip       : Add a known suffix (.service.ts, .util.ts, .hook.ts, .store.ts) or add an issue.`,
     );
   }
 
@@ -198,19 +187,4 @@ export async function generate(
   }
 
   return { role: context.role };
-}
-
-function createProject(tsconfig: string): Project {
-  if (fs.existsSync(tsconfig)) {
-    return new Project({
-      tsConfigFilePath: tsconfig,
-    });
-  }
-
-  return new Project({
-    compilerOptions: {
-      allowJs: true,
-      checkJs: true,
-    },
-  });
 }
