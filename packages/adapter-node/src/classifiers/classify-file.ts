@@ -2,7 +2,7 @@ import { VariableDeclarationKind } from "ts-morph";
 import type { SourceFile } from "ts-morph";
 import type { FileRole } from "cplint";
 
-// ── HTTP framework modules ───────────────────────────────────────────────────
+// ── Ecosystem Module Constants ──────────────────────────────────────────────
 const HTTP_FRAMEWORK_MODULES = [
   "express",
   "fastify",
@@ -10,11 +10,7 @@ const HTTP_FRAMEWORK_MODULES = [
   "@hono/hono",
   "koa",
 ];
-
-// ── Validation/schema libraries ──────────────────────────────────────────────
 const SCHEMA_MODULES = ["zod", "joi", "yup", "ajv", "class-validator"];
-
-// ── Queue/event bus libraries ────────────────────────────────────────────────
 const QUEUE_MODULES = [
   "bullmq",
   "bull",
@@ -24,46 +20,100 @@ const QUEUE_MODULES = [
   "eventemitter2",
 ];
 
+// ── Declarative Suffix Mapping ──────────────────────────────────────────────
+const SUFFIX_ROLE_MAP: Record<string, FileRole> = {
+  routes: "routes",
+  router: "routes",
+  controller: "controller",
+  service: "service",
+  repository: "repository",
+  repo: "repository",
+  useCase: "usecase",
+  facade: "facade",
+  middleware: "middleware",
+  guard: "guard",
+  command: "command",
+  decorator: "decorator",
+  domain: "domain",
+  mapper: "mapper",
+  converter: "converter",
+  schema: "schema",
+  cron: "cron",
+  query: "query",
+  dto: "schema",
+  validation: "schema",
+  config: "config",
+  configuration: "config",
+  env: "config",
+  constants: "constants",
+  constant: "constants",
+  enums: "constants",
+  enum: "constants",
+  types: "types",
+  type: "types",
+  interfaces: "types",
+  interface: "types",
+  event: "event",
+  handler: "event",
+  consumer: "event",
+  producer: "event",
+  factory: "factory",
+  plugin: "plugin",
+  model: "model",
+  models: "model",
+  store: "store",
+  hook: "hook",
+  page: "page",
+  util: "util",
+  utils: "util",
+  helper: "util",
+};
+
+// ── Declarative Class Pattern Mapping ───────────────────────────────────────
+const CLASS_PATTERNS: { regex: RegExp; role: FileRole }[] = [
+  { regex: /Facade$/, role: "facade" },
+  { regex: /Repository$|Repo$/, role: "repository" },
+  { regex: /Controller$/, role: "controller" },
+  { regex: /Service$/, role: "service" },
+  { regex: /Store$/, role: "store" },
+  { regex: /Page$/, role: "page" },
+  { regex: /Factory$/, role: "factory" },
+  { regex: /Guard$/, role: "guard" },
+  { regex: /Middleware$/, role: "middleware" },
+  { regex: /Handler$|Consumer$|Producer$|Listener$/, role: "event" },
+  { regex: /Plugin$/, role: "plugin" },
+  { regex: /Schema$|Dto$/, role: "schema" },
+  { regex: /Config$|Configuration$/, role: "config" },
+];
+
 // ── Helper: collect all exported arrow-function names ────────────────────────
 function getExportedArrowFunctionNames(file: SourceFile): string[] {
   return file
     .getVariableDeclarations()
     .filter((v) => {
       const init = v.getInitializer();
-      if (!init) return false;
-      const kind = init.getKindName();
-      if (kind !== "ArrowFunction") return false;
-      // must be part of an exported variable statement
-      const stmt = v.getVariableStatement();
-      return stmt?.isExported() ?? false;
+      if (init?.getKindName() !== "ArrowFunction") return false;
+      return v.getVariableStatement()?.isExported() ?? false;
     })
     .map((v) => v.getName());
 }
 
 // ── Helper: file exports only type/interface/enum declarations ───────────────
 function isTypeOnlyFile(file: SourceFile): boolean {
-  const hasClass = file.getClasses().length > 0;
-  const hasFunction = file.getFunctions().length > 0;
-  const hasExportedArrow = getExportedArrowFunctionNames(file).length > 0;
-  const hasExportedVar = file
-    .getVariableDeclarations()
-    .some((v) => v.getVariableStatement()?.isExported());
-  const hasTypeOrInterface =
-    file.getInterfaces().length > 0 || file.getTypeAliases().length > 0;
-
   return (
-    hasTypeOrInterface &&
-    !hasClass &&
-    !hasFunction &&
-    !hasExportedArrow &&
-    !hasExportedVar
+    (file.getInterfaces().length > 0 || file.getTypeAliases().length > 0) &&
+    file.getClasses().length === 0 &&
+    file.getFunctions().length === 0 &&
+    getExportedArrowFunctionNames(file).length === 0 &&
+    !file
+      .getVariableDeclarations()
+      .some((v) => v.getVariableStatement()?.isExported())
   );
 }
 
 // ── Helper: detect if file looks like a constants/enums file ─────────────────
 function isConstantsFile(file: SourceFile): boolean {
-  const enums = file.getEnums();
-  if (enums.length > 0) return true;
+  if (file.getEnums().length > 0) return true;
 
   const exportedVars = file
     .getVariableDeclarations()
@@ -71,15 +121,12 @@ function isConstantsFile(file: SourceFile): boolean {
 
   if (exportedVars.length === 0) return false;
 
-  // All exported vars must be const and non-function
   return exportedVars.every((v) => {
-    const stmt = v.getVariableStatement();
     const isConst =
-      stmt?.getDeclarationKind() === VariableDeclarationKind.Const;
-    const init = v.getInitializer();
-    if (!init) return false;
-    const kind = init.getKindName();
-    return isConst && kind !== "ArrowFunction";
+      v.getVariableStatement()?.getDeclarationKind() ===
+      VariableDeclarationKind.Const;
+    const isArrow = v.getInitializer()?.getKindName() === "ArrowFunction";
+    return isConst && !isArrow;
   });
 }
 
@@ -87,137 +134,68 @@ function isConstantsFile(file: SourceFile): boolean {
 export function classifyNodeFile(file: SourceFile): FileRole {
   const base = file.getBaseNameWithoutExtension().toLowerCase();
 
-  // Strip known suffixes like `.spec`, `.test`, `.e2e` for cleaner matching
-  const cleanBase = base
-    .replace(/\.(spec|test|e2e)$/, "")
-    .replace(/\.(spec|test|e2e)\.[a-z]+$/, "");
+  // 1. Entrypoint Check
+  if (base === "main" || base === "index") return "entrypoint";
 
-  // ── Entrypoint ──────────────────────────────────────────────────────────
-  if (cleanBase === "main" || cleanBase === "index") return "entrypoint";
+  // 2. Suffix Heuristics
+  const dotIndex = base.lastIndexOf(".");
+  if (dotIndex !== -1) {
+    const suffix = base.slice(dotIndex + 1);
+    if (SUFFIX_ROLE_MAP[suffix]) return SUFFIX_ROLE_MAP[suffix];
+  }
 
-  // ── Name-suffix heuristics ──────────────────────────────────────────────
-  if (cleanBase.endsWith(".routes") || cleanBase.endsWith(".router"))
-    return "routes";
-  if (cleanBase.endsWith(".controller")) return "controller";
-  if (cleanBase.endsWith(".service")) return "service";
-  if (cleanBase.endsWith(".repository") || cleanBase.endsWith(".repo"))
-    return "repository";
-  if (cleanBase.endsWith(".facade")) return "facade";
-  if (cleanBase.endsWith(".middleware")) return "middleware";
-  if (cleanBase.endsWith(".guard")) return "guard";
-  if (cleanBase.endsWith(".decorator")) return "decorator";
-  if (
-    cleanBase.endsWith(".schema") ||
-    cleanBase.endsWith(".dto") ||
-    cleanBase.endsWith(".validation")
-  )
-    return "schema";
-  if (
-    cleanBase.endsWith(".config") ||
-    cleanBase.endsWith(".configuration") ||
-    cleanBase.endsWith(".env")
-  )
-    return "config";
-  if (
-    cleanBase.endsWith(".constants") ||
-    cleanBase.endsWith(".constant") ||
-    cleanBase.endsWith(".enums") ||
-    cleanBase.endsWith(".enum")
-  )
-    return "constants";
-  if (
-    cleanBase.endsWith(".types") ||
-    cleanBase.endsWith(".type") ||
-    cleanBase.endsWith(".interfaces") ||
-    cleanBase.endsWith(".interface")
-  )
-    return "types";
-  if (
-    cleanBase.endsWith(".event") ||
-    cleanBase.endsWith(".handler") ||
-    cleanBase.endsWith(".consumer") ||
-    cleanBase.endsWith(".producer")
-  )
-    return "event";
-  if (cleanBase.endsWith(".factory")) return "factory";
-  if (cleanBase.endsWith(".plugin")) return "plugin";
-  if (cleanBase.endsWith(".model") || cleanBase.endsWith(".models"))
-    return "model";
-  if (cleanBase.endsWith(".store")) return "store";
-  if (cleanBase.endsWith(".hook")) return "hook";
-  if (cleanBase.endsWith(".page")) return "page";
-  if (
-    cleanBase.endsWith(".util") ||
-    cleanBase.endsWith(".utils") ||
-    cleanBase.endsWith(".helper")
-  )
-    return "util";
-
-  // ── Import analysis ─────────────────────────────────────────────────────
+  // 3. Import analysis setup
   const importedModules = file
     .getImportDeclarations()
     .map((i) => i.getModuleSpecifierValue());
-
   const importsHttpFramework = importedModules.some((m) =>
     HTTP_FRAMEWORK_MODULES.includes(m),
   );
-  const importsSchema = importedModules.some((m) => SCHEMA_MODULES.includes(m));
-  const importsQueue = importedModules.some((m) => QUEUE_MODULES.includes(m));
 
-  // ── Export shape heuristics (classes) ───────────────────────────────────
+  if (importedModules.some((m) => SCHEMA_MODULES.includes(m))) return "schema";
+  if (importedModules.some((m) => QUEUE_MODULES.includes(m))) return "event";
+
+  // 4. Export shape heuristics (Classes matching optimized pre-defined regex)
   for (const cls of file.getClasses()) {
-    const name = cls.getName() ?? "";
-    if (/Facade$/.test(name)) return "facade";
-    if (/Repository$|Repo$/.test(name)) return "repository";
-    if (/Controller$/.test(name)) return "controller";
-    if (/Service$/.test(name)) return "service";
-    if (/Store$/.test(name)) return "store";
-    if (/Page$/.test(name)) return "page";
-    if (/Factory$/.test(name)) return "factory";
-    if (/Guard$/.test(name)) return "guard";
-    if (/Middleware$/.test(name)) return "middleware";
-    if (/Handler$|Consumer$|Producer$|Listener$/.test(name)) return "event";
-    if (/Plugin$/.test(name)) return "plugin";
-    if (/Schema$|Dto$/.test(name)) return "schema";
-    if (/Config$|Configuration$/.test(name)) return "config";
+    const className = cls.getName() ?? "";
+    const match = CLASS_PATTERNS.find((p) => p.regex.test(className));
+    if (match) return match.role;
   }
 
-  // ── Schema/validation imports ────────────────────────────────────────────
-  if (importsSchema) return "schema";
-
-  // ── Queue/event imports ──────────────────────────────────────────────────
-  if (importsQueue) return "event";
-
-  // ── HTTP framework: only return controller if there are exported handlers ─
+  // 5. HTTP framework contextual analysis
   if (importsHttpFramework) {
-    const exportedFns = file.getFunctions().filter((f) => f.isExported());
-    const exportedArrows = getExportedArrowFunctionNames(file);
-
-    // Middleware pattern: single exported function receiving (req, res, next)
-    // or named with "middleware"/"use" prefix
-    const allExportedNames = [
-      ...exportedFns.map((f) => f.getName() ?? ""),
-      ...exportedArrows,
-    ];
-    const looksLikeMiddleware = allExportedNames.some(
-      (n) =>
-        /[Mm]iddleware$/.test(n) || /^use[A-Z]/.test(n) || /[Pp]lugin$/.test(n),
+    const hasMiddlewareName = [
+      ...file
+        .getFunctions()
+        .filter((f) => f.isExported())
+        .map((f) => f.getName() ?? ""),
+      ...getExportedArrowFunctionNames(file),
+    ].some(
+      (name) =>
+        /[Mm]iddleware$/.test(name) ||
+        /^use[A-Z]/.test(name) ||
+        /[Pp]lugin$/.test(name),
     );
-    if (looksLikeMiddleware) return "middleware";
 
-    return "controller";
+    return hasMiddlewareName ? "middleware" : "controller";
   }
 
-  // ── Type-only file ───────────────────────────────────────────────────────
+  // 6. Structural Static Analysis
   if (isTypeOnlyFile(file)) return "types";
-
-  // ── Constants/enums file ─────────────────────────────────────────────────
   if (isConstantsFile(file)) return "constants";
 
-  // ── Simple exported functions → util ─────────────────────────────────────
-  const exportedFunctions = file.getFunctions().filter((f) => f.isExported());
-  const exportedArrows = getExportedArrowFunctionNames(file);
-  if (exportedFunctions.length > 0 || exportedArrows.length > 0) return "util";
+  // 7. Fallback to general functional utility
+  const allExportedFnNames = [
+    ...file
+      .getFunctions()
+      .filter((f) => f.isExported())
+      .map((f) => f.getName() ?? ""),
+    ...getExportedArrowFunctionNames(file),
+  ];
+
+  if (allExportedFnNames.some((n) => /^use[A-Z]/.test(n))) return "hook";
+
+  if (allExportedFnNames.length > 0) return "util";
 
   return "unknown";
 }

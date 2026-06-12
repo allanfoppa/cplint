@@ -2,6 +2,15 @@ import type { Node as MorphNode } from "ts-morph";
 import type { SourceFile, TypeChecker } from "ts-morph";
 
 export type FileRole =
+  | "job"
+  | "cron"
+  | "command"
+  | "usecase"
+  | "query"
+  | "entity"
+  | "domain"
+  | "mapper"
+  | "converter"
   | "constants"
   | "event"
   | "factory"
