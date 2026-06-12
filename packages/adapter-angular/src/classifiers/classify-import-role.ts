@@ -1,80 +1,129 @@
+import { Node } from "ts-morph";
 import type { SourceFile } from "ts-morph";
 import type { FileRole } from "cplint";
 
+// ── Constants & Mappings ────────────────────────────────────────────────────
 const GUARD_INTERFACES = [
   "CanActivate",
   "CanMatch",
   "CanDeactivate",
   "CanLoad",
 ];
+const SIGNAL_STORE_FNS = ["signalStore", "createStore", "createFeatureStore"];
 
-/**
- * Classifies an Angular source file into a semantic FileRole.
- *
- * Strategy (in priority order):
- * 1. Decorator-based — most reliable (@Component, @Injectable, etc.)
- * 2. Functional patterns — NgRx SignalStore, standalone stores
- * 3. Name-suffix-based — fallback for files without decorators
- * 4. Content-based — last resort
- */
+const ANGULAR_SUFFIX_ROLE_MAP: Record<string, FileRole> = {
+  routes: "routes",
+  model: "model",
+  models: "model",
+  types: "model",
+  util: "util",
+  utils: "util",
+  helper: "util",
+  store: "store",
+  state: "store",
+  component: "component",
+  directive: "directive",
+  pipe: "pipe",
+  service: "service",
+  resolver: "service",
+  guard: "guard",
+  interceptor: "middleware",
+  module: "config",
+  config: "config",
+};
+
+// ── Main classifier ──────────────────────────────────────────────────────────
 export function classifyAngularFile(file: SourceFile): FileRole {
-  const classes = file.getClasses();
+  const filePath = file.getFilePath().toLowerCase();
+  const base = file.getBaseNameWithoutExtension().toLowerCase();
 
-  for (const cls of classes) {
+  // 1. Contextual Path Analysis
+  const isInsideServices =
+    filePath.includes("/services/") || filePath.includes("/core/");
+  const isInsideConstants =
+    filePath.includes("/constants/") || filePath.includes("/enums/");
+
+  // 2. Decorator-based Analysis (Class-level heuristics)
+  for (const cls of file.getClasses()) {
     const decoratorNames = cls.getDecorators().map((d) => d.getName());
 
     if (decoratorNames.includes("Component")) {
-      const name = cls.getName() ?? "";
-      if (/Page(Component)?$/.test(name)) return "page";
-      return "component";
+      const className = cls.getName() ?? "";
+      return /Page(Component)?$/.test(className) || base.includes("page")
+        ? "page"
+        : "component";
     }
 
     if (decoratorNames.includes("Directive")) return "directive";
     if (decoratorNames.includes("Pipe")) return "pipe";
+    if (decoratorNames.includes("NgModule")) return "config";
 
     if (decoratorNames.includes("Injectable")) {
       const implemented = cls
         .getImplements()
         .map((i) => i.getExpression().getText());
-
       if (implemented.some((i) => GUARD_INTERFACES.includes(i))) return "guard";
 
-      const name = cls.getName() ?? "";
-      if (/Guard$/.test(name)) return "guard";
-      if (/Facade$/.test(name)) return "facade";
-      if (/Store$/.test(name)) return "store";
-      if (/Repository$/.test(name)) return "repository";
+      const className = cls.getName() ?? "";
+      if (/Guard$/.test(className)) return "guard";
+      if (/Facade$/.test(className)) return "facade";
+      if (/Store$/.test(className)) return "store";
+      if (/Repository$/.test(className)) return "repository";
+
       return "service";
     }
   }
 
-  // ── Functional patterns ──────────────────────────────────────────────────
-  // NgRx SignalStore: `export const XStore = signalStore(...)`
-  const SIGNAL_STORE_FNS = ["signalStore", "createStore", "createFeatureStore"];
-
+  // 3. Variable Declarations (NgRx SignalStore & Modern Functional Patterns)
   for (const decl of file.getVariableDeclarations()) {
-    if (!decl.isExported()) continue;
+    if (!decl.getVariableStatement()?.isExported()) continue;
+
     const init = decl.getInitializer();
     if (!init) continue;
 
-    const callText = init.getText().trimStart();
-    if (SIGNAL_STORE_FNS.some((fn) => callText.startsWith(fn))) return "store";
+    // TypeScript compilation check type safety (Avoid raw string manipulation)
+    if (Node.isCallExpression(init)) {
+      const callName = init.getExpression().getText();
+      if (
+        SIGNAL_STORE_FNS.includes(callName) ||
+        callName === "create" ||
+        callName === "atom"
+      ) {
+        return "store";
+      }
+    }
 
-    // Zustand / Jotai patterns used in Angular (uncommon but possible)
-    if (/^create\(/.test(callText) || /^atom\(/.test(callText)) return "store";
+    const typeNode = decl.getTypeNode();
+    if (typeNode) {
+      const typeText = typeNode.getText();
+      if (/GuardFn$|ActivateFn$|MatchFn$|DeactivateFn$/.test(typeText))
+        return "guard";
+      if (typeText.includes("ResolveFn")) return "service";
+      if (typeText.includes("HttpInterceptorFn")) return "middleware";
+    }
   }
 
-  // ── Name-suffix fallback ─────────────────────────────────────────────────
-  const base = file.getBaseNameWithoutExtension().toLowerCase();
-  if (base.endsWith(".routes") || base === "routes") return "routes";
-  if (base.endsWith(".model") || base.endsWith(".models")) return "model";
-  if (base.endsWith(".util") || base.endsWith(".utils")) return "util";
-  if (base.endsWith(".store")) return "store";
-
-  // ── Functional Angular pages without @Component ──────────────────────────
-  for (const fn of file.getFunctions()) {
-    if (/Page$/.test(fn.getName() ?? "")) return "page";
+  // 4. Suffix Heuristics
+  const dotIndex = base.lastIndexOf(".");
+  if (dotIndex !== -1) {
+    const suffix = base.slice(dotIndex + 1);
+    if (ANGULAR_SUFFIX_ROLE_MAP[suffix]) return ANGULAR_SUFFIX_ROLE_MAP[suffix];
+  } else if (ANGULAR_SUFFIX_ROLE_MAP[base]) {
+    return ANGULAR_SUFFIX_ROLE_MAP[base]; // Direct fallback for files like routes.ts
   }
+
+  // 5. Functional / Architecture Conventions Fallback
+  for (const fn of file.getFunctions().filter((f) => f.isExported())) {
+    const fnName = fn.getName() ?? "";
+    if (/Page$/.test(fnName)) return "page";
+    if (/Guard$|Fn$/.test(fnName) && base.includes("guard")) return "guard";
+    if (/Interceptor$/.test(fnName)) return "middleware";
+  }
+
+  if (isInsideConstants) return "constants";
+  if (isInsideServices) return "service";
+
+  if (file.getFunctions().some((f) => f.isExported())) return "util";
 
   return "unknown";
 }
