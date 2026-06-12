@@ -6,7 +6,6 @@ import { exitWithError } from "../../core/utils/errors.js";
 
 type LintOptions = {
   format?: "stdout" | "json";
-  legacyRules?: boolean;
 };
 
 export async function runLint(options: LintOptions = {}): Promise<void> {
@@ -16,7 +15,7 @@ export async function runLint(options: LintOptions = {}): Promise<void> {
     exitWithError("NO_RULES_CONFIGURED");
   }
 
-  const rules = resolveRules(options.legacyRules ?? false, config.lint.rules);
+  const rules = resolveRules(config.lint.rules);
 
   const violations = runLintRunner({
     rootPath: config.rootPath ?? "src/",
