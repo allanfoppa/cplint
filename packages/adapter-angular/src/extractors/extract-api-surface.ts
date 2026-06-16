@@ -1,10 +1,10 @@
-import { Node } from "ts-morph";
+import { Node, Scope } from "ts-morph";
 import type {
   ClassDeclaration,
   Node as MorphNode,
   TypeChecker,
 } from "ts-morph";
-import type { ApiSurfaceRow, Config } from "cplint";
+import type { ApiSurfaceRow, Config, FileRole } from "cplint";
 import {
   firstExportDecls,
   getDisplayName,
@@ -12,9 +12,24 @@ import {
   getTypeTargetNode,
   buildApiRow,
 } from "cplint";
-import { classifyAngularFile } from "../classifiers/classify-file.js";
+import { classifyDeclaration } from "../classifiers/classify-declaration.js";
 
-const SIGNAL_STORE_FNS = ["signalStore", "createStore", "createFeatureStore"];
+const SIGNAL_STORE_FNS = new Set([
+  "signalStore",
+  "createStore",
+  "createFeatureStore",
+  "create",
+  "atom",
+]);
+
+const CLASS_INPUT_DECORATORS = new Set([
+  "Input",
+  "Output",
+  "ViewChild",
+  "ViewChildren",
+  "ContentChild",
+  "ContentChildren",
+]);
 
 export function extractApiSurface(
   exported: ReadonlyMap<string, MorphNode[]>,
@@ -25,7 +40,7 @@ export function extractApiSurface(
 
   for (const { exportName, decl } of firstExportDecls(exported)) {
     const name = getDisplayName(exportName, decl);
-    const kind = classifyAngularFile(decl.getSourceFile());
+    const kind = classifyDeclaration(decl, name, config);
 
     // ── Class (component, service, facade, guard, pipe…) ──────────────────
     if (Node.isClassDeclaration(decl)) {
@@ -36,23 +51,20 @@ export function extractApiSurface(
     // ── Functional store variable (NgRx SignalStore, etc.) ─────────────────
     if (Node.isVariableDeclaration(decl)) {
       const init = decl.getInitializer();
-      const isSignalStore =
-        init &&
-        SIGNAL_STORE_FNS.some((fn) =>
-          init.getText().trimStart().startsWith(fn),
-        );
 
-      if (isSignalStore) {
-        // The inferred type is a massive generic — summarise instead
-        rows.push(
-          buildApiRow({
-            name,
-            kind: "store",
-            type: "SignalStore",
-            flags: ["functional"],
-          }),
-        );
-        continue;
+      if (init && Node.isCallExpression(init)) {
+        const callName = init.getExpression().getText();
+        if (SIGNAL_STORE_FNS.has(callName)) {
+          rows.push(
+            buildApiRow({
+              name,
+              kind: "store",
+              type: "SignalStore",
+              flags: ["functional"],
+            }),
+          );
+          continue;
+        }
       }
     }
 
@@ -68,16 +80,45 @@ export function extractApiSurface(
 function extractClassMembers(
   className: string,
   cls: ClassDeclaration,
-  kind: string,
+  kind: FileRole,
   checker: TypeChecker,
 ): ApiSurfaceRow[] {
   const rows: ApiSurfaceRow[] = [
     buildApiRow({ name: className, kind, type: className }),
   ];
 
+  // ── Public properties with Angular decorators ──────────────────────────
+  cls
+    .getProperties()
+    .filter((p) => {
+      const isPublic =
+        p.getScope() === undefined || p.getScope() === Scope.Public;
+      const hasAngularDecorator = p
+        .getDecorators()
+        .some((d) => CLASS_INPUT_DECORATORS.has(d.getName()));
+      return isPublic && hasAngularDecorator;
+    })
+    .forEach((prop) => {
+      const decoratorName =
+        prop
+          .getDecorators()
+          .find((d) => CLASS_INPUT_DECORATORS.has(d.getName()))
+          ?.getName() ?? "property";
+      const type = shortType(prop.getType().getText(prop));
+      rows.push(
+        buildApiRow({
+          name: prop.getName(),
+          kind: decoratorName.toLowerCase() as FileRole,
+          type,
+          flags: [decoratorName.toLowerCase()],
+        }),
+      );
+    });
+
+  // ── Public methods ─────────────────────────────────────────────────────
   cls
     .getMethods()
-    .filter((m) => m.getScope() === undefined || m.getScope() === "public")
+    .filter((m) => m.getScope() === undefined || m.getScope() === Scope.Public)
     .forEach((method) => {
       const params = method
         .getParameters()

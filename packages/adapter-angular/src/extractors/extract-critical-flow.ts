@@ -1,5 +1,6 @@
 import {
   Node,
+  Scope,
   SyntaxKind,
   type Node as MorphNode,
   type TypeChecker,
@@ -45,7 +46,7 @@ function extractClassFlows(
 
   const methods = cls
     .getMethods()
-    .filter((m) => m.getScope() === undefined || m.getScope() === "public")
+    .filter((m) => m.getScope() === undefined || m.getScope() === Scope.Public)
     .filter((m) => !m.getName().startsWith("_"))
     .slice(0, config.maxFlowSteps);
 

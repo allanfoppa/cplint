@@ -1,9 +1,11 @@
 import { SourceFile, type Node as MorphNode } from "ts-morph";
-import { Config } from "../../../cplint/src/core/types/index.js";
-import { firstExportDecls } from "../../../cplint/src/core/utils/first-export-decls.js";
-import { hasReferenceSearch } from "../../../cplint/src/core/utils/has-reference-search.js";
-import { normalizePath } from "../../../cplint/src/core/utils/normalize-path.js";
-import { getReferenceNode } from "../../../cplint/src/core/utils/get-reference-node.js";
+import {
+  Config,
+  firstExportDecls,
+  hasReferenceSearch,
+  normalizePath,
+  getReferenceNode,
+} from "cplint";
 
 export function extractChangeChecklist(
   sourceFile: SourceFile,
