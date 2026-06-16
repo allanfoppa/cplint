@@ -32,24 +32,80 @@ const ANGULAR_SUFFIX_ROLE_MAP: Record<string, FileRole> = {
   config: "config",
 };
 
+// Structural matrix covering Clean, Hexagonal, Onion Architecture, and DDD
+const ARCHITECTURE_PATH_MAP: { segments: string[]; role: FileRole }[] = [
+  {
+    segments: [
+      "/repositories/",
+      "/infra/repositories/",
+      "/data/repositories/",
+      "/gateways/",
+    ],
+    role: "repository",
+  },
+  {
+    segments: [
+      "/usecases/",
+      "/use-cases/",
+      "/application/use-cases/",
+      "/domain/use-cases/",
+      "/interactors/",
+    ],
+    role: "usecase",
+  },
+  {
+    segments: ["/services/", "/core/services/", "/application/services/"],
+    role: "service",
+  },
+  {
+    segments: ["/constants/", "/enums/", "/shared/constants/"],
+    role: "constants",
+  },
+  { segments: ["/facades/", "/infrastructure/facades/"], role: "facade" },
+  {
+    segments: [
+      "/models/",
+      "/types/",
+      "/domain/models/",
+      "/entities/",
+      "/domain/entities/",
+    ],
+    role: "model",
+  },
+  {
+    segments: ["/controllers/", "/presenters/", "/adapters/controllers/"],
+    role: "controller",
+  },
+  {
+    segments: ["/components/", "/ui/", "/shared/components/", "/widgets/"],
+    role: "component",
+  },
+  { segments: ["/pages/", "/views/", "/screens/", "/features/"], role: "page" },
+  {
+    segments: ["/store/", "/state/", "/ngrx/", "/stores/", "/signals/"],
+    role: "store",
+  },
+];
+
 // ── Main classifier ──────────────────────────────────────────────────────────
 export function classifyAngularFile(file: SourceFile): FileRole {
   const filePath = file.getFilePath().toLowerCase();
   const base = file.getBaseNameWithoutExtension().toLowerCase();
 
-  // 1. Contextual Path Analysis
-  const isInsideServices =
-    filePath.includes("/services/") || filePath.includes("/core/");
-  const isInsideConstants =
-    filePath.includes("/constants/") || filePath.includes("/enums/");
+  // Skip test, spec, and mock assets from architectural classification
+  if (base.includes("spec") || base.includes("test") || base.includes("mock")) {
+    return "unknown";
+  }
 
-  // 2. Decorator-based Analysis (Class-level heuristics)
+  // 1. Decorator-based Analysis (Class-level heuristics)
   for (const cls of file.getClasses()) {
     const decoratorNames = cls.getDecorators().map((d) => d.getName());
 
     if (decoratorNames.includes("Component")) {
       const className = cls.getName() ?? "";
-      return /Page(Component)?$/.test(className) || base.includes("page")
+      return /Page(Component)?$/.test(className) ||
+        base.includes("page") ||
+        filePath.includes("/pages/")
         ? "page"
         : "component";
     }
@@ -74,14 +130,13 @@ export function classifyAngularFile(file: SourceFile): FileRole {
     }
   }
 
-  // 3. Variable Declarations (NgRx SignalStore & Modern Functional Patterns)
+  // 2. Variable Declarations (NgRx SignalStore & Modern Functional Patterns)
   for (const decl of file.getVariableDeclarations()) {
     if (!decl.getVariableStatement()?.isExported()) continue;
 
     const init = decl.getInitializer();
     if (!init) continue;
 
-    // TypeScript compilation check type safety (Avoid raw string manipulation)
     if (Node.isCallExpression(init)) {
       const callName = init.getExpression().getText();
       if (
@@ -103,16 +158,16 @@ export function classifyAngularFile(file: SourceFile): FileRole {
     }
   }
 
-  // 4. Suffix Heuristics
+  // 3. Suffix Heuristics
   const dotIndex = base.lastIndexOf(".");
   if (dotIndex !== -1) {
     const suffix = base.slice(dotIndex + 1);
     if (ANGULAR_SUFFIX_ROLE_MAP[suffix]) return ANGULAR_SUFFIX_ROLE_MAP[suffix];
   } else if (ANGULAR_SUFFIX_ROLE_MAP[base]) {
-    return ANGULAR_SUFFIX_ROLE_MAP[base]; // Direct fallback for files like routes.ts
+    return ANGULAR_SUFFIX_ROLE_MAP[base];
   }
 
-  // 5. Functional / Architecture Conventions Fallback
+  // 4. Functional / Architecture Conventions Fallback
   for (const fn of file.getFunctions().filter((f) => f.isExported())) {
     const fnName = fn.getName() ?? "";
     if (/Page$/.test(fnName)) return "page";
@@ -120,9 +175,13 @@ export function classifyAngularFile(file: SourceFile): FileRole {
     if (/Interceptor$/.test(fnName)) return "middleware";
   }
 
-  if (isInsideConstants) return "constants";
-  if (isInsideServices) return "service";
+  // 5. Structural Path Analysis (Evaluated before generic fallback to protect pure-functional layers)
+  const matchedPath = ARCHITECTURE_PATH_MAP.find((mapping) =>
+    mapping.segments.some((segment) => filePath.includes(segment)),
+  );
+  if (matchedPath) return matchedPath.role;
 
+  // 6. Generic Functional Fallback
   if (file.getFunctions().some((f) => f.isExported())) return "util";
 
   return "unknown";
