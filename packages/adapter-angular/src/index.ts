@@ -1,7 +1,7 @@
 import type { SourceFile, TypeChecker } from "ts-morph";
 import type { CPLintAdapter, Config, ExtractedContext, FileRole } from "cplint";
 
-import { classifyAngularFile } from "./classifiers/classify-import-role.js";
+import { classifyAngularFile } from "./classifiers/classify-file.js";
 import { extractApiSurface } from "./extractors/extract-api-surface.js";
 import { extractChangeChecklist } from "./extractors/extract-change-checklist.js";
 import { extractCriticalFlow } from "./extractors/extract-critical-flow.js";

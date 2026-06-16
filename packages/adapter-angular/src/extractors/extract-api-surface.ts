@@ -12,7 +12,7 @@ import {
   getTypeTargetNode,
   buildApiRow,
 } from "cplint";
-import { classifyAngularFile } from "../classifiers/classify-import-role.js";
+import { classifyAngularFile } from "../classifiers/classify-file.js";
 
 const SIGNAL_STORE_FNS = ["signalStore", "createStore", "createFeatureStore"];
 

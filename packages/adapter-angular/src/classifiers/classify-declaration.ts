@@ -1,29 +1,52 @@
 import { Node, SyntaxKind } from "ts-morph";
 import type { Node as MorphNode } from "ts-morph";
-import type { Config } from "cplint";
+import type { Config, FileRole } from "cplint";
 
-// ── Declarative Class Decorator Maps ────────────────────────────────────────
-const DIRECT_DECORATOR_MAP: Record<string, string> = {
+// ── Declarative Maps ─────────────────────────────────────────────────────────
+const DIRECT_DECORATOR_MAP: Record<string, FileRole> = {
   Directive: "directive",
   Pipe: "pipe",
-  NgModule: "module",
+  NgModule: "config",
 };
 
-const INJECTABLE_SUFFIX_MAP: { regex: RegExp; role: string }[] = [
+const GUARD_INTERFACES = [
+  "CanActivate",
+  "CanMatch",
+  "CanDeactivate",
+  "CanLoad",
+];
+
+const INJECTABLE_SUFFIX_MAP: { regex: RegExp; role: FileRole }[] = [
   { regex: /Guard$/, role: "guard" },
   { regex: /Facade$/, role: "facade" },
   { regex: /Store$/, role: "store" },
   { regex: /Repository$/, role: "repository" },
   { regex: /UseCase$|UseCaseActive$/, role: "usecase" },
+  { regex: /Mapper$/, role: "mapper" },
+  { regex: /Factory$/, role: "factory" },
+  { regex: /Converter$/, role: "converter" },
 ];
 
-const SIGNAL_STORE_FNS = ["signalStore", "createStore", "createFeatureStore"];
+const CLASS_SUFFIX_MAP: { regex: RegExp; role: FileRole }[] = [
+  ...INJECTABLE_SUFFIX_MAP,
+  { regex: /Entity$/, role: "entity" },
+  { regex: /Domain$/, role: "domain" },
+  { regex: /Event$/, role: "event" },
+  { regex: /Schema$/, role: "schema" },
+];
 
-// ── Declarative Simple Kind Map ─────────────────────────────────────────────
-const SIMPLE_DECL_MAP: Record<number, string> = {
-  [SyntaxKind.InterfaceDeclaration]: "interface",
-  [SyntaxKind.TypeAliasDeclaration]: "type",
-  [SyntaxKind.EnumDeclaration]: "enum",
+const SIGNAL_STORE_FNS = new Set([
+  "signalStore",
+  "createStore",
+  "createFeatureStore",
+  "create",
+  "atom",
+]);
+
+const SIMPLE_DECL_MAP: Record<number, FileRole> = {
+  [SyntaxKind.InterfaceDeclaration]: "types",
+  [SyntaxKind.TypeAliasDeclaration]: "types",
+  [SyntaxKind.EnumDeclaration]: "constants",
 };
 
 // ── Main Classifier ──────────────────────────────────────────────────────────
@@ -31,8 +54,8 @@ export function classifyDeclaration(
   decl: MorphNode,
   name: string,
   _config: Config,
-): string {
-  // 1. Class Declarations (Angular Components, Services, and Pure Domain Classes)
+): FileRole {
+  // 1. Class Declarations
   if (Node.isClassDeclaration(decl)) {
     const decoratorNames = decl.getDecorators().map((d) => d.getName());
 
@@ -40,63 +63,63 @@ export function classifyDeclaration(
       return /Page(Component)?$/.test(name) ? "page" : "component";
     }
 
-    // Match structural decorators (Directive, Pipe, NgModule)
     const matchedDirect = decoratorNames.find((d) => DIRECT_DECORATOR_MAP[d]);
     if (matchedDirect) return DIRECT_DECORATOR_MAP[matchedDirect];
 
-    // Match Injectable services and its architectural sub-roles
     if (decoratorNames.includes("Injectable")) {
+      // Check implemented interfaces before falling back to name suffix
+      const implemented = decl
+        .getImplements()
+        .map((i) => i.getExpression().getText());
+      if (implemented.some((i) => GUARD_INTERFACES.includes(i))) return "guard";
+
       const match = INJECTABLE_SUFFIX_MAP.find((p) => p.regex.test(name));
       return match ? match.role : "service";
     }
 
-    // Fallback for pure/decoupled domain classes (Clean Architecture / Onion style without decorators)
-    const pureMatch = INJECTABLE_SUFFIX_MAP.find((p) => p.regex.test(name));
+    // Pure/decoupled domain classes without decorators
+    const pureMatch = CLASS_SUFFIX_MAP.find((p) => p.regex.test(name));
     if (pureMatch) return pureMatch.role;
 
-    return "class";
+    return "model";
   }
 
-  // 2. Functional Patterns (Functions & Functional Interceptors/Providers)
+  // 2. Function Declarations
   if (Node.isFunctionDeclaration(decl)) {
-    if (/Guard$|Fn$/.test(name) && /guard/i.test(name)) return "guard";
-    if (/Resolver$/.test(name)) return "service";
+    if (/Guard$|GuardFn$/.test(name)) return "guard";
     if (/Interceptor$/.test(name)) return "middleware";
-    if (/^provide/.test(name)) return "config"; // Matches provider engines like provideMyFeature()
+    if (/Resolver$/.test(name)) return "service";
+    if (/^provide[A-Z]/.test(name)) return "config";
+    if (/Pipe$/.test(name)) return "pipe";
 
-    return "function";
+    return "util";
   }
 
-  // 3. Modern Reactive Variables (NgRx SignalStore & Functional Blocks)
+  // 3. Variable Declarations (functional patterns & stores)
   if (Node.isVariableDeclaration(decl)) {
     const init = decl.getInitializer();
 
-    // Detect functional state stores (NgRx SignalStore, Akita, or custom creators)
     if (init && Node.isCallExpression(init)) {
       const callName = init.getExpression().getText();
-      if (SIGNAL_STORE_FNS.includes(callName) || callName === "createStore") {
-        return "store";
-      }
+      if (SIGNAL_STORE_FNS.has(callName)) return "store";
+      if (/^provide[A-Z]/.test(callName)) return "config";
     }
 
-    // Check modern functional type annotations (e.g., const authGuard: CanActivateFn)
     const typeNode = decl.getTypeNode();
     if (typeNode) {
       const typeText = typeNode.getText();
-      if (/GuardFn$|ActivateFn$|MatchFn$|DeactivateFn$/.test(typeText))
+      if (/CanActivateFn|CanDeactivateFn|CanMatchFn|CanLoadFn/.test(typeText))
         return "guard";
-      if (typeText.includes("ResolveFn")) return "service";
-      if (typeText.includes("HttpInterceptorFn")) return "middleware";
+      if (/HttpInterceptorFn/.test(typeText)) return "middleware";
+      if (/ResolveFn/.test(typeText)) return "service";
     }
 
-    return "variable";
+    return "util";
   }
 
   // 4. Static Language Structures
   const kind = decl.getKind();
-  if (SIMPLE_DECL_MAP[kind]) {
-    return SIMPLE_DECL_MAP[kind];
-  }
+  if (SIMPLE_DECL_MAP[kind]) return SIMPLE_DECL_MAP[kind];
 
   return "unknown";
 }
