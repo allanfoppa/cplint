@@ -37,15 +37,23 @@ export function extractApiSurface(
       continue;
     }
 
+    // ─── Refatorado: Extração limpa de Interfaces e Aliases ─────────────────
     if (
       Node.isInterfaceDeclaration(decl) ||
       Node.isTypeAliasDeclaration(decl)
     ) {
+      // Remove quebras de linha e o token "export " do início do bloco de texto
+      const cleanText = decl
+        .getText()
+        .replace(/^export\s+/, "")
+        .replace(/\s+/g, " ")
+        .trim();
+
       rows.push(
         buildApiRow({
           name,
           kind: "type",
-          type: shortType(decl.getText()),
+          type: shortType(cleanText),
         }),
       );
       continue;

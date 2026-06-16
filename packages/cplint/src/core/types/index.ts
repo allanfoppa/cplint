@@ -164,7 +164,6 @@ export type StateShapeRow = {
 };
 
 export type SemanticContext = {
-  title: string;
   role: FileRole;
   /**
    * One-sentence AUTO summary of the file's primary export.
@@ -175,7 +174,7 @@ export type SemanticContext = {
   meta: {
     generated: string;
     entry: string;
-    related: string[];
+    relatedContextFiles: string[];
   };
   entryPoints: EntryPoint[];
   apiSurface: ApiSurfaceRow[];

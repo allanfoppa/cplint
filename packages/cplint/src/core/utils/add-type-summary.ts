@@ -1,11 +1,6 @@
-import { SyntaxKind } from "ts-morph";
-import type {
-  Node as MorphNode,
-  SourceFile,
-  Type,
-  TypeChecker,
-} from "ts-morph";
-import type { FileRole, StateShapeRow } from "../types/index.js";
+import type { Node as MorphNode } from "ts-morph";
+import type { SourceFile, Type, TypeChecker } from "ts-morph";
+import type { ApiSurfaceRow, FileRole, StateShapeRow } from "../types/index.js";
 import { shortType } from "./short-type.js";
 
 // ─── addTypeSummary ───────────────────────────────────────────────────────────
@@ -31,184 +26,111 @@ export function addTypeSummary(
 
 // ─── buildSummary ─────────────────────────────────────────────────────────────
 
-export function buildSummary(
-  sourceFile: SourceFile,
-  role: FileRole,
-  _checker: TypeChecker,
-): string {
+export function buildSummary(role: FileRole, apiSurface: any[]): string {
+  // Encontra a linha principal do export (ignora métodos internos indentados)
+  const mainExport = (apiSurface || []).find(
+    (row) => row && !row.name.startsWith("  "),
+  );
+
+  if (!mainExport) {
+    return `Exports architecture assets. Role: ${role}.`;
+  }
+
+  const cleanName = mainExport.name.trim();
+
+  // ── Entrypoint ───────────────────────────────────────────────────────────
   if (role === "entrypoint") {
     return "Application entrypoint. Bootstraps the app and wires top-level dependencies.";
   }
 
-  // ── Store: class-based OR functional (NgRx SignalStore, Zustand…) ────────
-  // Must come before isClassRole check because "store" was incorrectly
-  // included in CLASS_ROLES — functional stores have no exported class.
+  // ── Store ────────────────────────────────────────────────────────────────
   if (role === "store") {
-    const cls = sourceFile.getClasses().find((c) => c.isExported());
-    if (cls) {
-      const stateCount = cls
-        .getProperties()
-        .filter((p) => !p.hasModifier(SyntaxKind.PrivateKeyword)).length;
-      return `Exported store class. Manages ${stateCount} state field(s).`;
+    if (mainExport.kind === "class") {
+      const methodsCount = apiSurface.filter(
+        (row) => row.kind === "method",
+      ).length;
+      return `Exported store class \`${cleanName}\`. Manages state with ${methodsCount} public feature(s).`;
     }
-    return buildFunctionalStoreSummary(sourceFile);
+    return `Exported functional store \`${cleanName}\`. Manages application state.`;
   }
 
-  // ── Angular / Node class-based roles ────────────────────────────────────
-  if (isClassRole(role)) {
-    const cls = sourceFile.getClasses().find((c) => c.isExported());
-    if (cls) {
-      const publicMethods = cls
-        .getMethods()
-        .filter((m) => m.getScope() === undefined || m.getScope() === "public");
-      return `Exported ${roleLabel(role)}. ${cls.getName() ?? role} with ${publicMethods.length} public method(s).`;
-    }
-    return `Exported ${roleLabel(role)}.`;
+  // ── Class-based roles (Service, Facade, Repository, Controller) ──────────
+  if (
+    ["service", "facade", "repository", "controller", "directive"].includes(
+      role,
+    )
+  ) {
+    const methodsCount = apiSurface.filter(
+      (row) => row.kind === "method",
+    ).length;
+    return `Exported ${role} class. \`${cleanName}\` exposing ${methodsCount} public method(s).`;
   }
 
-  // ── Component / Page — Angular class or React function ───────────────────
+  // ── Component / Page ─────────────────────────────────────────────────────
   if (role === "component" || role === "page") {
-    const cls = sourceFile.getClasses().find((c) => c.isExported());
-    if (cls) {
-      const publicMethods = cls
-        .getMethods()
-        .filter((m) => m.getScope() === undefined || m.getScope() === "public");
-      return `Exported Angular ${role} class. ${cls.getName() ?? role} with ${publicMethods.length} public method(s).`;
+    if (mainExport.kind === "class") {
+      const methodsCount = apiSurface.filter(
+        (row) => row.kind === "method",
+      ).length;
+      return `Exported Angular ${role} class \`${cleanName}\` with ${methodsCount} public method(s).`;
     }
-    const fn = sourceFile.getFunctions().find((f) => f.isExported());
-    if (fn) {
-      const params = buildParamsSummary(fn);
-      return `Exported function ${role}. ${params}Returns JSX.`;
-    }
-    return `Exported ${role}. Returns JSX.`;
+    const paramsDesc = mainExport.params
+      ? `Receives props: \`${mainExport.params}\`. `
+      : "";
+    return `Exported component \`${cleanName}\`. ${paramsDesc}Returns JSX.`;
   }
 
-  // ── Hook ────────────────────────────────────────────────────────────────
+  // ── Hook ─────────────────────────────────────────────────────────────────
   if (role === "hook") {
-    const fn = sourceFile
-      .getFunctions()
-      .find((f) => /^use[A-Z]/.test(f.getName() ?? ""));
-    if (fn) {
-      const params = buildParamsSummary(fn);
-      const ret = fn.getReturnTypeNode()?.getText() ?? "unknown";
-      return `Exported React hook. ${params}Returns \`${ret}\`.`;
-    }
-    return "Exported React hook.";
+    const paramsDesc = mainExport.params
+      ? `Receives \`${mainExport.params}\`. `
+      : "";
+    const retDesc = mainExport.type
+      ? `Returns \`${mainExport.type}\`.`
+      : "Returns hook state.";
+    return `Exported React hook \`${cleanName}\`. ${paramsDesc}${retDesc}`;
   }
 
   // ── Model ────────────────────────────────────────────────────────────────
   if (role === "model") {
-    const names = [
-      ...sourceFile.getInterfaces().filter((i) => i.isExported()),
-      ...sourceFile.getTypeAliases().filter((t) => t.isExported()),
-    ].map((t) => `\`${t.getName()}\``);
-    if (names.length) {
-      return `Exports ${names.length} type definition(s): ${names.join(", ")}.`;
+    const types = apiSurface
+      .filter((row) => row.kind === "type")
+      .map((row) => `\`${row.name}\``);
+    if (types.length) {
+      return `Exports ${types.length} type definition(s): ${types.join(", ")}.`;
     }
+    return `Exported type boundaries for \`${cleanName}\`.`;
   }
 
   // ── Util ─────────────────────────────────────────────────────────────────
   if (role === "util") {
-    const fns = sourceFile.getFunctions().filter((f) => f.isExported());
-    if (fns.length === 1) {
-      const params = buildParamsSummary(fns[0]);
-      const ret = fns[0].getReturnTypeNode()?.getText() ?? "unknown";
-      return `Exported utility function. ${params}Returns \`${ret}\`.`;
+    // Filtra todos os símbolos reais expostos na raiz do utilitário (evita quebras por variação de kind)
+    const rootUtils = apiSurface.filter(
+      (row) => row && !row.name.startsWith("  "),
+    );
+
+    if (rootUtils.length === 1) {
+      const paramsDesc = rootUtils[0].params
+        ? `Receives \`${rootUtils[0].params}\`. `
+        : "";
+      const retDesc = rootUtils[0].type
+        ? `Returns \`${rootUtils[0].type}\`.`
+        : "";
+      return `Exported utility function \`${cleanName}\`. ${paramsDesc}${retDesc}`.trim();
     }
-    if (fns.length > 1) {
-      return `Exports ${fns.length} utility functions: ${fns
-        .map((f) => `\`${f.getName()}\``)
-        .join(", ")}.`;
-    }
+
+    return `Exports ${rootUtils.length} utility function(s): ${rootUtils.map((f) => `\`${f.name.trim()}\``).join(", ")}.`;
   }
 
-  // ── Guard ────────────────────────────────────────────────────────────────
-  if (role === "guard") {
-    const cls = sourceFile.getClasses().find((c) => c.isExported());
-    return `Exported route guard${cls ? ` (${cls.getName()})` : ""}. Controls route access.`;
-  }
-
-  // ── Pipe ─────────────────────────────────────────────────────────────────
-  if (role === "pipe") {
-    const cls = sourceFile.getClasses().find((c) => c.isExported());
-    return `Exported Angular pipe${cls ? ` (${cls.getName()})` : ""}. Transforms template values.`;
-  }
-
-  // ── Routes ───────────────────────────────────────────────────────────────
-  if (role === "routes") {
+  // ── Fallbacks Estruturados ───────────────────────────────────────────────
+  if (role === "guard")
+    return `Exported route guard \`${cleanName}\`. Controls route access.`;
+  if (role === "pipe")
+    return `Exported Angular pipe \`${cleanName}\`. Transforms template values.`;
+  if (role === "routes")
     return "Exported route configuration. Defines navigation structure.";
-  }
+  if (role === "context")
+    return `Exported React context \`${cleanName}\`. Provides shared state to tree.`;
 
-  // ── Context ──────────────────────────────────────────────────────────────
-  if (role === "context") {
-    return "Exported React context. Provides shared state to the component tree.";
-  }
-
-  // ── Fallback ─────────────────────────────────────────────────────────────
-  const exportCount = sourceFile.getExportedDeclarations().size;
-  return `Exports ${exportCount} symbol(s). Role: ${role}.`;
-}
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-// "store" intentionally excluded — handled separately above
-// to support both class-based and functional stores.
-const CLASS_ROLES: FileRole[] = [
-  "service",
-  "facade",
-  "repository",
-  "controller",
-  "directive",
-];
-
-function isClassRole(role: FileRole): boolean {
-  return CLASS_ROLES.includes(role);
-}
-
-function roleLabel(role: FileRole): string {
-  const labels: Partial<Record<FileRole, string>> = {
-    service: "service class",
-    facade: "facade class",
-    repository: "repository class",
-    controller: "controller class",
-    directive: "Angular directive",
-  };
-  return labels[role] ?? role;
-}
-
-function buildFunctionalStoreSummary(sourceFile: SourceFile): string {
-  const calls = sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression);
-  for (const call of calls) {
-    if (call.getExpression().getText() !== "withState") continue;
-    const args = call.getArguments();
-    if (!args.length) continue;
-    const firstArg = args[0];
-    if (firstArg.getKind() === SyntaxKind.ObjectLiteralExpression) {
-      const props = (firstArg as any).getProperties?.() ?? [];
-      return `Exported functional store. Manages ${props.length} state field(s) via withState.`;
-    }
-  }
-  return "Exported functional store. Manages application state.";
-}
-
-/**
- * Collapses any whitespace sequences (including newlines from ts-morph's
- * raw source text) into a single space. Applied to every string that may
- * originate from AST getText() calls before embedding in YAML scalars.
- */
-function normalizeInlineText(text: string): string {
-  return text.replace(/\s+/g, " ").trim();
-}
-
-function buildParamsSummary(fn: { getParameters: () => any[] }): string {
-  try {
-    const params = fn.getParameters().map((p: any) => {
-      const name = normalizeInlineText(p.getName());
-      const type = normalizeInlineText(p.getTypeNode()?.getText() ?? "unknown");
-      return `\`${name}: ${type}\``;
-    });
-    return params.length ? `Receives ${params.join(", ")}. ` : "";
-  } catch {
-    return "";
-  }
+  return `Exports symbol \`${cleanName}\`. Role: ${role}.`;
 }

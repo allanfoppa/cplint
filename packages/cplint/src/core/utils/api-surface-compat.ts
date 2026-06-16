@@ -6,9 +6,21 @@ export function buildApiRow(opts: {
   type: string;
   params?: string;
   flags?: string[];
+  signature?: string;
 }): ApiSurfaceRow {
-  const { name, kind, type, params = "", flags = [] } = opts;
-  const signature = buildSignature(name, kind, type, normalizeParams(params));
+  const {
+    name,
+    kind,
+    type,
+    params = "",
+    flags = [],
+    signature: customSignature,
+  } = opts;
+
+  const signature =
+    customSignature ||
+    buildSignature(name, kind, type, normalizeParams(params));
+
   const allFlags = [kind, "exported", ...flags].filter(Boolean);
   return { name, signature, flags: allFlags };
 }
@@ -16,14 +28,6 @@ export function buildApiRow(opts: {
 /**
  * Flattens multiline parameter strings (as extracted by ts-morph from
  * destructured or formatted function signatures) into a single line.
- *
- * Without this, signatures like:
- *   Layout({
- *     header,
- *     navbar,
- *   }: LayoutProps) → string
- *
- * produce invalid YAML when serialized as a quoted scalar.
  */
 function normalizeParams(params: string): string {
   return params
@@ -71,7 +75,9 @@ function buildSignature(
 
     case "type":
     case "interface":
-      return `type ${name} = ${type}`;
+      return type.startsWith("type ") || type.startsWith("interface ")
+        ? type
+        : `type ${name} = ${type}`;
 
     case "enum":
       return `enum ${name}`;

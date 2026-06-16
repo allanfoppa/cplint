@@ -88,8 +88,9 @@ export function interleaveYaml(
     global: {
       ...manualFields,
       meta: {
+        role: autoContext.role,
         ...(autoContext.meta || {}),
-        related: related.length ? related : [],
+        relatedContextFiles: related.length ? related : [],
       },
       summary: autoContext.summary || "",
       deps: depsPayload,

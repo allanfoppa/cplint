@@ -1,7 +1,6 @@
 import type { SourceFile, TypeChecker } from "ts-morph";
 import type { CPLintAdapter, Config, SemanticContext } from "../types/index.js";
 import { normalizePath } from "../utils/normalize-path.js";
-import { humanizeTitle } from "../utils/humanize-text.js";
 import { buildSummary } from "../utils/add-type-summary.js";
 
 export function buildContext({
@@ -15,24 +14,33 @@ export function buildContext({
   config: Config;
   adapter: CPLintAdapter;
 }): SemanticContext {
-  const title = humanizeTitle(sourceFile);
   const role = adapter.classify(sourceFile);
-  const extracted = adapter.extract(sourceFile, checker, config);
+  const generated = new Date().toISOString().slice(0, 10);
+  const entry = normalizePath(sourceFile.getFilePath());
+  const {
+    relatedContextFiles,
+    entryPoints,
+    apiSurface,
+    deps,
+    stateShape,
+    criticalFlow,
+    changeChecklist,
+  } = adapter.extract(sourceFile, checker, config);
+  const summary = buildSummary(role, apiSurface);
 
   return {
-    title,
     role,
-    summary: buildSummary(sourceFile, role, checker),
+    summary,
     meta: {
-      generated: new Date().toISOString().slice(0, 10),
-      entry: normalizePath(sourceFile.getFilePath()),
-      related: extracted.relatedContextFiles,
+      generated,
+      entry,
+      relatedContextFiles,
     },
-    entryPoints: extracted.entryPoints,
-    apiSurface: extracted.apiSurface,
-    deps: extracted.deps,
-    stateShape: extracted.stateShape,
-    criticalFlow: extracted.criticalFlow,
-    changeChecklist: extracted.changeChecklist,
+    entryPoints,
+    apiSurface,
+    deps,
+    stateShape,
+    criticalFlow,
+    changeChecklist,
   };
 }
