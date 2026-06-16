@@ -7,7 +7,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint:exports": "pnpm -r --parallel exec publint",
     "lint:deps": "dependency-cruiser --config .dependency-cruiser.cjs packages",
-    "build": "pnpm typecheck && pnpm lint:exports && pnpm lint:deps && pnpm --filter \"@cplint/adapter-*\" run build && pnpm --filter cplint run build"
+    "buildTokenTemplate": "node scripts/compile-templates.js",
+    "build": "pnpm typecheck && pnpm lint:exports && pnpm lint:deps && pnpm buildTokenTemplate && pnpm --filter \"@cplint/adapter-*\" run build && pnpm --filter cplint run build"
   },
   "engines": {
     "node": ">=18.0.0",
@@ -19,5 +20,8 @@
     "publint": "^0.3.21",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "gpt-tokenizer": "^3.4.0"
   }
 }

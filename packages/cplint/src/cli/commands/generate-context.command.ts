@@ -2,9 +2,7 @@ import { Command } from "commander";
 import { contextGenerator } from "../../tools/context-generator/index.js";
 import { exitWithError } from "../../core/utils/errors.js";
 
-export const contextCommand = new Command("generate");
-
-contextCommand
+export const contextCommand = new Command("generate")
   .description(
     "Generate .cplint.yaml context files from TypeScript source files",
   )

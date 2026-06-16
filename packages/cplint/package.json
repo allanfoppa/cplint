@@ -57,6 +57,7 @@
   "devDependencies": {
     "@cplint/adapter-angular": "workspace:*",
     "@cplint/adapter-react": "workspace:*",
+    "@types/node": "^25.6.2",
     "tsdown": "^0.22.0",
     "vitest": "^4.1.5"
   },

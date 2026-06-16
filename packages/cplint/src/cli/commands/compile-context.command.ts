@@ -1,9 +1,7 @@
 import { Command } from "commander";
 import { contextCompiler } from "../../tools/context-compiler/index.js";
 
-export const compileCommand = new Command("compile");
-
-compileCommand
+export const compileCommand = new Command("compile")
   .description("Compile a .cplint.yaml into an interleaved, LLM-ready payload")
   .requiredOption("-f, --file <path>", "Path to the .cplint.yaml file")
   .option(

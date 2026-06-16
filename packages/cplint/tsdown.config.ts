@@ -4,7 +4,7 @@ export default defineConfig({
   entry: ["src/main.ts", "src/index.ts"],
   format: "esm",
   outDir: "dist",
-  clean: true,
+  clean: ["!report-template.html"],
   fixedExtension: false,
   platform: "node",
   outputOptions: {

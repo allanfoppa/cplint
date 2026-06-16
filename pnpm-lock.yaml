@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      gpt-tokenizer:
+        specifier: ^3.4.0
+        version: 3.4.0
     devDependencies:
       '@types/node':
         specifier: ^25.6.2
@@ -87,6 +91,9 @@ importers:
       '@cplint/adapter-react':
         specifier: workspace:*
         version: link:../adapter-react
+      '@types/node':
+        specifier: ^25.6.2
+        version: 25.6.2
       tsdown:
         specifier: ^0.22.0
         version: 0.22.0(publint@0.3.21)(tsx@4.21.0)(typescript@5.9.3)
@@ -746,6 +753,9 @@ packages:
   global-directory@4.0.1:
     resolution: {integrity: sha512-wHTUcDUoZ1H5/0iVqEudYW4/kAlN5cZ3j/bXn0Dpbizl9iaUVeWSHqiOjsgk6OW2bkLclbBjzewBz6weQ1zA2Q==}
     engines: {node: '>=18'}
+
+  gpt-tokenizer@3.4.0:
+    resolution: {integrity: sha512-wxFLnhIXTDjYebd9A9pGl3e31ZpSypbpIJSOswbgop5jLte/AsZVDvjlbEuVFlsqZixVKqbcoNmRlFDf6pz/UQ==}
 
   graceful-fs@4.2.11:
     resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
@@ -1751,6 +1761,8 @@ snapshots:
   global-directory@4.0.1:
     dependencies:
       ini: 4.1.1
+
+  gpt-tokenizer@3.4.0: {}
 
   graceful-fs@4.2.11: {}
 

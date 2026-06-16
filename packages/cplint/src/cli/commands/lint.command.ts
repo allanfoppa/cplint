@@ -1,9 +1,7 @@
 import { Command } from "commander";
 import { runLint } from "../../tools/linter/index.js";
 
-export const lintCommand = new Command("lint");
-
-lintCommand
+export const lintCommand = new Command("lint")
   .description("Lint .cplint.yaml files for LLM-consumption anti-patterns")
   .option(
     "--format <format>",

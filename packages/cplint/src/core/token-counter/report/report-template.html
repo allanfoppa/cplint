@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>cplint source token report</title>
+  </head>
+  <body>
+    <header>
+      <div class="logo">
+        <div class="logo-icon">◈</div>
+        <span class="logo-name">cplint</span
+        ><span class="logo-cmd">token-counter</span>
+      </div>
+      <span class="header-meta" id="header-date"></span>
+    </header>
+    <main>
+      <div class="section">
+        <div class="section-header">
+          <span class="section-label">reference model</span>
+          <div class="model-tabs">
+            <button class="mtab active" onclick="setModel(0, this)">
+              Claude 3.5 Sonnet
+            </button>
+            <button class="mtab" onclick="setModel(1, this)">GPT-4o</button>
+            <button class="mtab" onclick="setModel(2, this)">
+              Gemini 1.5 Pro
+            </button>
+            <button class="mtab" onclick="setModel(3, this)">Llama 3.1</button>
+          </div>
+        </div>
+      </div>
+      <div class="metrics" id="metrics"></div>
+      <div class="section">
+        <div class="section">
+          <div class="section-label" style="margin-bottom: 10px">
+            pre-emptive alert threshold
+          </div>
+          <div class="threshold-card">
+            <div class="threshold-row">
+              <span>warn if file exceeds</span>
+              <input
+                type="range"
+                min="100"
+                max="6000"
+                step="50"
+                value="2000"
+                id="warn-slider"
+                oninput="onThreshold()"
+              />
+              <span class="threshold-val" id="warn-val">2,000</span>
+              <span>tokens</span>
+            </div>
+          </div>
+        </div>
+        <div class="section" id="alert-section"></div>
+        <div class="section-header">
+          <span class="section-label">analyzed source files</span>
+          <div class="sort-bar">
+            <button class="sort-btn active" onclick="setSort('tokens', this)">
+              tokens ↓
+            </button>
+            <button class="sort-btn" onclick="setSort('name', this)">
+              name
+            </button>
+          </div>
+        </div>
+        <div class="file-list" id="file-list"></div>
+      </div>
+    </main>
+    <footer id="footer-date"></footer>
+  </body>
+</html>
