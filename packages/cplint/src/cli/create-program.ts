@@ -1,9 +1,8 @@
 import { Command } from "commander";
 
-import { contextCommand } from "./commands/generate-context.command.js";
-import { compileCommand } from "./commands/compile-context.command.js";
-import { lintCommand } from "./commands/lint.command.js";
 import { tokenCounterCommand } from "./commands/token-counter.js";
+import { generateCommand } from "./commands/generate.command.js";
+import { lintCommand } from "./commands/lint.command.js";
 
 export function createProgram() {
   const program = new Command();
@@ -16,10 +15,9 @@ export function createProgram() {
 
   program.helpCommand(true);
 
-  program.addCommand(contextCommand);
-  program.addCommand(compileCommand);
-  program.addCommand(lintCommand);
   program.addCommand(tokenCounterCommand);
+  program.addCommand(generateCommand);
+  program.addCommand(lintCommand);
 
   return program;
 }

@@ -2,20 +2,19 @@ import path from "node:path";
 import fs from "node:fs";
 import fg from "fast-glob";
 import { normalizePath } from "../../core/utils/normalize-path.js";
-import { extractManualBlocks } from "../../core/context-generator/renderers/extract-manual-blocks.js";
 import { loadConfig } from "../../config/load-config.js";
 import {
   Config,
   CPLintAdapter,
   DEFAULT_CONFIG,
 } from "../../core/types/index.js";
-import { buildContext } from "../../core/context-generator/build-context.js";
+import { buildContext } from "../../core/generator/build-context.js";
 import { getOutputPath } from "../../core/utils/get-output-path.js";
-import { renderDocument } from "../../core/context-generator/renderers/render-document.js";
 import { resolveAdapter } from "../../adapters-in/resolve-adapter.js";
 import { resolveEntrypoint } from "../../core/utils/resolve-entrypoint.js";
 import { exitWithError } from "../../core/utils/errors.js";
 import { createProject } from "../../core/utils/create-project.js";
+import { interleaveYaml } from "../../core/utils/interleave-yaml.js";
 
 type GenerateContextOptions = {
   entrypoint?: string[];
@@ -129,7 +128,6 @@ async function generateAll(
 
   console.log(`⏱ Time      : ${elapsed}s`);
 }
-
 export async function generate(
   entrypoint: string,
   adapter: CPLintAdapter,
@@ -139,7 +137,6 @@ export async function generate(
     throw new Error("Usage: cplint generate --entrypoint <entry-file>");
   }
 
-  // ── Quick skip for test files in single entrypoint mode ───────────────────
   const isTestFile = /\.(spec|test)\.[a-z]+$/.test(entrypoint.toLowerCase());
   if (isTestFile) {
     throw new Error(
@@ -164,23 +161,21 @@ export async function generate(
   const checker = project.getTypeChecker();
   const context = buildContext({ sourceFile, checker, config, adapter });
 
-  // Warn when classifier could not resolve the role
-  if (context.role === "unknown") {
-    console.warn(
-      `⚠ [CPLint] role: unknown for "${normalizePath(entrypoint)}" — context may be inaccurate. ` +
-        `Check the classifier or rename the file with a known suffix.`,
-    );
-  }
-
   const outputPath = getOutputPath(sourceFile.getFilePath(), config);
-  const existing = fs.existsSync(outputPath)
+
+  // Recupera o conteúdo antigo nativamente se ele já existir
+  const existingYaml = fs.existsSync(outputPath)
     ? fs.readFileSync(outputPath, "utf8")
     : "";
 
-  const manualBlocks = extractManualBlocks(existing);
-  const nextDoc = renderDocument(context, config, manualBlocks, sourceFile);
+  // Renderiza o esqueleto automático injetando o conteúdo manual pré-existente
+  const finalYaml = interleaveYaml(
+    context,
+    existingYaml,
+    config.manualDefaults,
+  );
 
-  fs.writeFileSync(outputPath, nextDoc, "utf8");
+  fs.writeFileSync(outputPath, finalYaml, "utf8");
 
   if (!_silent) {
     console.log(`✔ Wrote ${normalizePath(outputPath)}`);
