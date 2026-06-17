@@ -1,7 +1,7 @@
 import { encode } from "gpt-tokenizer";
 import { readFileSync } from "node:fs";
 
-export interface TokenCount {
+export interface IAnalyze {
   file: string;
   tokens: number;
   content: string;
@@ -10,7 +10,7 @@ export interface TokenCount {
 /**
  * Reads a source file or context metadata and estimates its token footprint using BPE.
  */
-export function countTokens(file: string): TokenCount {
+export function analyze(file: string): IAnalyze {
   const content = readFileSync(file, "utf-8");
   return {
     file,

@@ -6,10 +6,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const rootDir = resolve(__dirname, "..");
-const srcDir = resolve(
-  rootDir,
-  "packages/cplint/src/core/token-counter/report",
-);
+const srcDir = resolve(rootDir, "packages/cplint/src/core/analyze/report");
 const distDir = resolve(rootDir, "packages/cplint/dist");
 
 try {

@@ -1,9 +1,9 @@
 import { Command } from "commander";
-import { runTokenCounter } from "../../tools/token-counter/index.js";
+import { runAnalyzer } from "../../tools/analyze/index.js";
 
-export const tokenCounterCommand = new Command("token-counter")
+export const analyzeCommand = new Command("analyze")
   .description(
     "Analyze the token footprint of source files, helping you identify potential files to optimize for context before send to LLMs.",
   )
   .option("-w, --warn <n>", "threshold de warning", "2000")
-  .action(async (options) => runTokenCounter(options));
+  .action(async (options) => runAnalyzer(options));

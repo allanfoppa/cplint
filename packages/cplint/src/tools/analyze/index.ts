@@ -1,12 +1,12 @@
 import { writeFileSync } from "node:fs";
 import { resolve, relative } from "node:path";
 import fg from "fast-glob";
-import { countTokens } from "../../core/token-counter/index.js";
-import { generateHtmlReport } from "../../core/token-counter/report/report.js";
+import { analyze } from "../../core/analyze/index.js";
+import { generateHtmlReport } from "../../core/analyze/report/report.js";
 import { loadConfig } from "../../config/load-config.js";
 import { normalizePath } from "../../core/utils/normalize-path.js";
 
-export type TokenCounterOptions = {
+export type AnalyzerOptions = {
   warn?: string;
 };
 
@@ -16,8 +16,8 @@ export interface SourceFileCount {
   tokens: number;
 }
 
-export async function runTokenCounter(
-  options: TokenCounterOptions = {},
+export async function runAnalyzer(
+  options: AnalyzerOptions = {},
 ): Promise<void> {
   const warnThreshold = parseInt(options.warn ?? "2000", 10);
 
@@ -39,7 +39,7 @@ export async function runTokenCounter(
   }
 
   const results: SourceFileCount[] = sourceFiles.map((filePath) => {
-    const fileCount = countTokens(filePath);
+    const fileCount = analyze(filePath);
     const relPath = relative(process.cwd(), filePath);
     const parts = relPath.split("/");
 
@@ -55,10 +55,10 @@ export async function runTokenCounter(
     warnThreshold,
   });
 
-  const outPath = resolve(process.cwd(), "cplint-budget.html");
+  const outPath = resolve(process.cwd(), "cplint-analyze.html");
   writeFileSync(outPath, html, "utf-8");
 
   console.log(
-    `\n✔ Source Code Token Report saved to: ${normalizePath(outPath)}`,
+    `\n✔ Report from Source Code Analyzed saved to: ${normalizePath(outPath)}`,
   );
 }

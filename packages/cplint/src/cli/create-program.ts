@@ -1,6 +1,6 @@
 import { Command } from "commander";
 
-import { tokenCounterCommand } from "./commands/token-counter.js";
+import { analyzeCommand } from "./commands/analyze.js";
 import { generateCommand } from "./commands/generate.command.js";
 import { lintCommand } from "./commands/lint.command.js";
 
@@ -15,7 +15,7 @@ export function createProgram() {
 
   program.helpCommand(true);
 
-  program.addCommand(tokenCounterCommand);
+  program.addCommand(analyzeCommand);
   program.addCommand(generateCommand);
   program.addCommand(lintCommand);
 
