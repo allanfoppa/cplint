@@ -28,7 +28,8 @@ const SUFFIX_ROLE_MAP: Record<string, FileRole> = {
   service: "service",
   repository: "repository",
   repo: "repository",
-  useCase: "usecase",
+  usecase: "usecase",
+  "use-case": "usecase",
   facade: "facade",
   middleware: "middleware",
   guard: "guard",
@@ -98,10 +99,15 @@ function getExportedArrowFunctionNames(file: SourceFile): string[] {
     .map((v) => v.getName());
 }
 
-// ── Helper: file exports only type/interface/enum declarations ───────────────
+// ── Helper: file exports only type/interface declarations (not enums) ────────
 function isTypeOnlyFile(file: SourceFile): boolean {
+  const hasTypes =
+    file.getInterfaces().some((i) => i.isExported()) ||
+    file.getTypeAliases().some((a) => a.isExported());
+
   return (
-    (file.getInterfaces().length > 0 || file.getTypeAliases().length > 0) &&
+    hasTypes &&
+    file.getEnums().length === 0 &&
     file.getClasses().length === 0 &&
     file.getFunctions().length === 0 &&
     getExportedArrowFunctionNames(file).length === 0 &&
@@ -113,7 +119,7 @@ function isTypeOnlyFile(file: SourceFile): boolean {
 
 // ── Helper: detect if file looks like a constants/enums file ─────────────────
 function isConstantsFile(file: SourceFile): boolean {
-  if (file.getEnums().length > 0) return true;
+  if (file.getEnums().some((e) => e.isExported())) return true;
 
   const exportedVars = file
     .getVariableDeclarations()
@@ -130,21 +136,40 @@ function isConstantsFile(file: SourceFile): boolean {
   });
 }
 
+// ── Helper: detect barrel re-export files ────────────────────────────────────
+function isBarrelFile(file: SourceFile): boolean {
+  const hasExportDecls = file.getExportDeclarations().length > 0;
+  const hasNoOwnDeclarations =
+    file.getClasses().length === 0 &&
+    file.getFunctions().length === 0 &&
+    file
+      .getVariableDeclarations()
+      .filter((v) => v.getVariableStatement()?.isExported()).length === 0 &&
+    file.getInterfaces().length === 0 &&
+    file.getTypeAliases().length === 0 &&
+    file.getEnums().length === 0;
+
+  return hasExportDecls && hasNoOwnDeclarations;
+}
+
 // ── Main classifier ──────────────────────────────────────────────────────────
 export function classifyNodeFile(file: SourceFile): FileRole {
   const base = file.getBaseNameWithoutExtension().toLowerCase();
 
-  // 1. Entrypoint Check
-  if (base === "main" || base === "index") return "entrypoint";
+  // 1. Entrypoint check — only true entry files, not barrels
+  if (base === "main") return "entrypoint";
+  if (base === "index" && !isBarrelFile(file)) return "entrypoint";
 
-  // 2. Suffix Heuristics
+  // 2. Suffix heuristics
   const dotIndex = base.lastIndexOf(".");
   if (dotIndex !== -1) {
     const suffix = base.slice(dotIndex + 1);
     if (SUFFIX_ROLE_MAP[suffix]) return SUFFIX_ROLE_MAP[suffix];
+  } else if (SUFFIX_ROLE_MAP[base]) {
+    return SUFFIX_ROLE_MAP[base];
   }
 
-  // 3. Import analysis setup
+  // 3. Import analysis
   const importedModules = file
     .getImportDeclarations()
     .map((i) => i.getModuleSpecifierValue());
@@ -155,7 +180,7 @@ export function classifyNodeFile(file: SourceFile): FileRole {
   if (importedModules.some((m) => SCHEMA_MODULES.includes(m))) return "schema";
   if (importedModules.some((m) => QUEUE_MODULES.includes(m))) return "event";
 
-  // 4. Export shape heuristics (Classes matching optimized pre-defined regex)
+  // 4. Class name pattern matching
   for (const cls of file.getClasses()) {
     const className = cls.getName() ?? "";
     const match = CLASS_PATTERNS.find((p) => p.regex.test(className));
@@ -180,11 +205,11 @@ export function classifyNodeFile(file: SourceFile): FileRole {
     return hasMiddlewareName ? "middleware" : "controller";
   }
 
-  // 6. Structural Static Analysis
+  // 6. Structural static analysis
   if (isTypeOnlyFile(file)) return "types";
   if (isConstantsFile(file)) return "constants";
 
-  // 7. Fallback to general functional utility
+  // 7. Functional fallback
   const allExportedFnNames = [
     ...file
       .getFunctions()
@@ -194,7 +219,6 @@ export function classifyNodeFile(file: SourceFile): FileRole {
   ];
 
   if (allExportedFnNames.some((n) => /^use[A-Z]/.test(n))) return "hook";
-
   if (allExportedFnNames.length > 0) return "util";
 
   return "unknown";

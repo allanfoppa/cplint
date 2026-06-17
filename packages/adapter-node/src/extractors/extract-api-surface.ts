@@ -1,4 +1,4 @@
-import { Node } from "ts-morph";
+import { Node, Scope } from "ts-morph";
 import type {
   ClassDeclaration,
   ExportedDeclarations,
@@ -8,11 +8,20 @@ import type {
 } from "ts-morph";
 import type { ApiSurfaceRow, Config } from "cplint";
 import { getDisplayName, shortType, buildApiRow } from "cplint";
+import { classifyNodeFile } from "../classifiers/classify-file.js";
+
+const SIGNAL_STORE_FNS = new Set([
+  "signalStore",
+  "createStore",
+  "createFeatureStore",
+  "create",
+  "atom",
+]);
 
 export function extractApiSurface(
   exported: ReadonlyMap<string, ExportedDeclarations[]>,
   checker: TypeChecker,
-  _config: Config,
+  config: Config,
 ): ApiSurfaceRow[] {
   const rows: ApiSurfaceRow[] = [];
 
@@ -21,28 +30,27 @@ export function extractApiSurface(
     if (!decl) continue;
 
     const name = getDisplayName(exportName, decl);
+    const kind = classifyNodeFile(decl.getSourceFile());
 
     if (Node.isClassDeclaration(decl)) {
-      rows.push(...extractClassMembers(name, decl, checker));
+      rows.push(...extractClassMembers(name, decl, kind, checker));
       continue;
     }
 
     if (Node.isFunctionDeclaration(decl)) {
-      rows.push(extractFunction(name, decl, checker));
+      rows.push(extractFunction(name, decl, kind));
       continue;
     }
 
     if (Node.isVariableDeclaration(decl)) {
-      rows.push(extractVariable(name, decl, checker));
+      rows.push(extractVariable(name, decl, kind, checker));
       continue;
     }
 
-    // ─── Refatorado: Extração limpa de Interfaces e Aliases ─────────────────
     if (
       Node.isInterfaceDeclaration(decl) ||
       Node.isTypeAliasDeclaration(decl)
     ) {
-      // Remove quebras de linha e o token "export " do início do bloco de texto
       const cleanText = decl
         .getText()
         .replace(/^export\s+/, "")
@@ -52,7 +60,7 @@ export function extractApiSurface(
       rows.push(
         buildApiRow({
           name,
-          kind: "type",
+          kind,
           type: shortType(cleanText),
         }),
       );
@@ -68,27 +76,30 @@ export function extractApiSurface(
 function extractClassMembers(
   className: string,
   cls: ClassDeclaration,
+  kind: string,
   checker: TypeChecker,
 ): ApiSurfaceRow[] {
   const rows: ApiSurfaceRow[] = [
-    buildApiRow({ name: className, kind: "class", type: className }),
+    buildApiRow({ name: className, kind, type: className }),
   ];
 
   cls
     .getMethods()
-    .filter((m) => m.getScope() === undefined || m.getScope() === "public")
+    .filter((m) => m.getScope() === undefined || m.getScope() === Scope.Public)
     .forEach((method) => {
       const params = method
         .getParameters()
         .map((p) => `${p.getName()}: ${shortType(p.getType().getText(p))}`)
         .join(", ");
       const ret = shortType(method.getReturnType().getText(method));
+      const flags = method.isAsync() ? ["async"] : [];
       rows.push(
         buildApiRow({
-          name: `  ${method.getName()}`,
+          name: method.getName(),
           kind: "method",
           type: ret,
           params,
+          flags,
         }),
       );
     });
@@ -99,7 +110,7 @@ function extractClassMembers(
 function extractFunction(
   name: string,
   fn: FunctionDeclaration,
-  _checker: TypeChecker,
+  kind: string,
 ): ApiSurfaceRow {
   const params = fn
     .getParameters()
@@ -107,17 +118,45 @@ function extractFunction(
     .join(", ");
   const ret = shortType(fn.getReturnType().getText(fn));
   const flags = fn.isAsync() ? ["async"] : [];
-  return buildApiRow({ name, kind: "function", type: ret, params, flags });
+  return buildApiRow({ name, kind, type: ret, params, flags });
 }
 
 function extractVariable(
   name: string,
   decl: VariableDeclaration,
-  _checker: TypeChecker,
+  kind: string,
+  checker: TypeChecker,
 ): ApiSurfaceRow {
+  const init = decl.getInitializer();
+
+  // Functional store
+  if (init && Node.isCallExpression(init)) {
+    const callName = init.getExpression().getText();
+    if (SIGNAL_STORE_FNS.has(callName)) {
+      return buildApiRow({
+        name,
+        kind: "store",
+        type: "Store",
+        flags: ["functional"],
+      });
+    }
+  }
+
+  // Arrow function — render as call signature
+  if (init && Node.isArrowFunction(init)) {
+    const params = init
+      .getParameters()
+      .map((p) => `${p.getName()}: ${shortType(p.getType().getText(p))}`)
+      .join(", ");
+    const ret = shortType(init.getReturnType().getText(init));
+    const flags = init.isAsync() ? ["async"] : [];
+    return buildApiRow({ name, kind, type: ret, params, flags });
+  }
+
+  // Plain variable
   return buildApiRow({
     name,
-    kind: "variable",
+    kind,
     type: shortType(decl.getType().getText(decl)),
   });
 }

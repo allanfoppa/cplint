@@ -1,4 +1,4 @@
-import { Node, SyntaxKind } from "ts-morph";
+import { Node, Scope, SyntaxKind } from "ts-morph";
 import type {
   FunctionDeclaration,
   MethodDeclaration,
@@ -25,7 +25,7 @@ export function extractCriticalFlow(
       const methods = decl
         .getMethods()
         .filter(
-          (m) => !m.getName().startsWith("_") && m.getScope() !== "private",
+          (m) => !m.getName().startsWith("_") && m.getScope() !== Scope.Private,
         );
 
       for (const method of methods.slice(0, config.maxFlowSteps)) {
