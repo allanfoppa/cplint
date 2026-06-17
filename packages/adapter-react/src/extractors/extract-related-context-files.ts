@@ -1,8 +1,7 @@
 import fs from "node:fs";
 import type { SourceFile } from "ts-morph";
-import type { Config } from "../../../cplint/src/core/types/index.js";
-import { getOutputPath } from "../../../cplint/src/core/utils/get-output-path.js";
-import { normalizePath } from "../../../cplint/src/core/utils/normalize-path.js";
+import type { Config } from "cplint";
+import { getOutputPath, normalizePath } from "cplint";
 
 export function extractRelatedContextFiles(
   sourceFile: SourceFile,

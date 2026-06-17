@@ -1,10 +1,6 @@
 import { SourceFile } from "ts-morph";
-import type {
-  Config,
-  DependencyRow,
-} from "../../../cplint/src/core/types/index.js";
-import { getImportBindingNodes } from "../../../cplint/src/core/utils/get-import-binding-nodes.js";
-import { isImportBindingUsedInFile } from "../../../cplint/src/core/utils/is-import-binding-used-in-file.js";
+import type { Config, DependencyRow } from "cplint";
+import { getImportBindingNodes, isImportBindingUsedInFile } from "cplint";
 
 function inferDepRole(module: string, symbols: string[]): string {
   // React core

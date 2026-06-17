@@ -1,11 +1,6 @@
 import type { Node as MorphNode, SourceFile } from "ts-morph";
-import type {
-  Config,
-  EntryPoint,
-} from "../../../cplint/src/core/types/index.js";
-import { firstExportDecls } from "../../../cplint/src/core/utils/first-export-decls.js";
-import { getDisplayName } from "../../../cplint/src/core/utils/get-display-name.js";
-import { normalizePath } from "../../../cplint/src/core/utils/normalize-path.js";
+import type { Config, EntryPoint } from "cplint";
+import { firstExportDecls, getDisplayName, normalizePath } from "cplint";
 import { classifyDeclaration } from "../classifiers/classify-declaration.js";
 
 export function extractEntryPoints(
@@ -13,9 +8,12 @@ export function extractEntryPoints(
   sourceFile: SourceFile,
   config: Config,
 ): EntryPoint[] {
-  return firstExportDecls(exported).map(({ exportName, decl }) => ({
-    name: getDisplayName(exportName, decl),
-    kind: classifyDeclaration(decl, getDisplayName(exportName, decl), config),
-    file: normalizePath(sourceFile.getFilePath()),
-  }));
+  return firstExportDecls(exported).map(({ exportName, decl }) => {
+    const name = getDisplayName(exportName, decl);
+    return {
+      name,
+      kind: classifyDeclaration(decl, name, config),
+      file: normalizePath(sourceFile.getFilePath()),
+    };
+  });
 }

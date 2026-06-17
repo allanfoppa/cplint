@@ -1,14 +1,32 @@
 import { Node } from "ts-morph";
-import type { Node as MorphNode, TypeChecker } from "ts-morph";
 import type {
-  ApiSurfaceRow,
-  Config,
-} from "../../../cplint/src/core/types/index.js";
-import { firstExportDecls } from "../../../cplint/src/core/utils/first-export-decls.js";
-import { getDisplayName } from "../../../cplint/src/core/utils/get-display-name.js";
-import { shortType } from "../../../cplint/src/core/utils/short-type.js";
-import { buildApiRow } from "../../../cplint/src/core/utils/api-surface-compat.js";
+  ArrowFunction,
+  FunctionDeclaration,
+  FunctionExpression,
+  Node as MorphNode,
+  TypeChecker,
+} from "ts-morph";
+import type { ApiSurfaceRow, Config } from "cplint";
+import {
+  firstExportDecls,
+  getDisplayName,
+  shortType,
+  buildApiRow,
+} from "cplint";
 import { classifyDeclaration } from "../classifiers/classify-declaration.js";
+
+type FunctionLike = FunctionDeclaration | ArrowFunction | FunctionExpression;
+
+function extractFunctionLike(decl: MorphNode): FunctionLike | null {
+  if (Node.isFunctionDeclaration(decl)) return decl;
+  if (Node.isVariableDeclaration(decl)) {
+    const init = decl.getInitializer();
+    if (!init) return null;
+    if (Node.isArrowFunction(init) || Node.isFunctionExpression(init))
+      return init;
+  }
+  return null;
+}
 
 export function extractApiSurface(
   exported: ReadonlyMap<string, MorphNode[]>,
@@ -23,44 +41,27 @@ export function extractApiSurface(
 
     // ── Hook: params + return type ───────────────────────────────────────────
     if (kind === "hook") {
-      const fn = Node.isFunctionDeclaration(decl)
-        ? decl
-        : Node.isVariableDeclaration(decl)
-          ? decl.getInitializer()
-          : null;
-
-      if (
-        fn &&
-        (Node.isFunctionDeclaration(fn) ||
-          Node.isArrowFunction(fn) ||
-          Node.isFunctionExpression(fn))
-      ) {
-        const params =
-          // @ts-ignore — getParameters exists on all function-like nodes
-          fn
-            .getParameters?.()
-            ?.map(
-              (p: any) =>
-                `${p.getName()}: ${shortType(p.getType().getText(p))}`,
-            )
-            .join(", ") ?? "";
-
+      const fn = extractFunctionLike(decl);
+      if (fn) {
+        const params = fn
+          .getParameters()
+          .map((p) => `${p.getName()}: ${shortType(p.getType().getText(p))}`)
+          .join(", ");
         const ret = shortType(checker.getTypeAtLocation(fn).getText(fn));
         rows.push(buildApiRow({ name, kind, type: ret, params }));
       }
       continue;
     }
 
-    // ── Component: props type ────────────────────────────────────────────────
+    // ── Component / Page: props type ─────────────────────────────────────────
     if (kind === "component" || kind === "page") {
-      const propsType = extractPropsType(decl, checker);
+      const fn = extractFunctionLike(decl);
+      const firstParam = fn?.getParameters()[0];
+      const propsType = firstParam
+        ? shortType(checker.getTypeAtLocation(firstParam).getText(firstParam))
+        : "";
       rows.push(
-        buildApiRow({
-          name,
-          kind,
-          type: "JSX.Element",
-          params: propsType ?? "",
-        }),
+        buildApiRow({ name, kind, type: "JSX.Element", params: propsType }),
       );
       continue;
     }
@@ -76,35 +77,4 @@ export function extractApiSurface(
   }
 
   return rows;
-}
-
-function extractPropsType(
-  decl: MorphNode,
-  checker: TypeChecker,
-): string | null {
-  if (Node.isFunctionDeclaration(decl)) {
-    const firstParam = decl.getParameters()[0];
-    if (firstParam) {
-      return shortType(
-        checker.getTypeAtLocation(firstParam).getText(firstParam),
-      );
-    }
-  }
-
-  if (Node.isVariableDeclaration(decl)) {
-    const init = decl.getInitializer();
-    if (
-      init &&
-      (Node.isArrowFunction(init) || Node.isFunctionExpression(init))
-    ) {
-      const firstParam = init.getParameters()[0];
-      if (firstParam) {
-        return shortType(
-          checker.getTypeAtLocation(firstParam).getText(firstParam),
-        );
-      }
-    }
-  }
-
-  return null;
 }

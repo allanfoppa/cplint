@@ -1,12 +1,7 @@
 import { Node, SyntaxKind } from "ts-morph";
 import type { Node as MorphNode, SourceFile, TypeChecker } from "ts-morph";
-import type {
-  Config,
-  StateShapeRow,
-} from "../../../cplint/src/core/types/index.js";
-import { firstExportDecls } from "../../../cplint/src/core/utils/first-export-decls.js";
-import { getDisplayName } from "../../../cplint/src/core/utils/get-display-name.js";
-import { addTypeSummary } from "../../../cplint/src/core/utils/add-type-summary.js";
+import type { Config, StateShapeRow } from "cplint";
+import { firstExportDecls, getDisplayName, addTypeSummary } from "cplint";
 
 const STATE_HOOK_PATTERNS = /^use(State|Reducer|Context|Store|Atom|Signal)$/;
 const STORE_CREATE_PATTERNS = /^(create|createSlice|createStore|atom|signal)$/;
@@ -63,7 +58,6 @@ export function extractStateShape(
 
       if (!STATE_HOOK_PATTERNS.test(callName)) continue;
 
-      // useState<T>() — extract T
       const typeArgs = call.getTypeArguments();
       if (typeArgs.length) {
         const stateType = checker.getTypeAtLocation(typeArgs[0]);
@@ -78,7 +72,6 @@ export function extractStateShape(
         continue;
       }
 
-      // useState(initialValue) — infer from initializer
       const args = call.getArguments();
       if (args.length) {
         const stateType = checker.getTypeAtLocation(args[0]);

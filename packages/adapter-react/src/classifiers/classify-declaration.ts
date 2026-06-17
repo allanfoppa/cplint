@@ -1,13 +1,13 @@
 import { Node, SyntaxKind } from "ts-morph";
 import type { Node as MorphNode } from "ts-morph";
-import type { Config } from "cplint";
+import type { Config, FileRole } from "cplint";
 
 // ── Declarative Node Kind Mapping ───────────────────────────────────────────
-const SIMPLE_KIND_ROLE_MAP: Record<number, string> = {
-  [SyntaxKind.InterfaceDeclaration]: "interface",
-  [SyntaxKind.TypeAliasDeclaration]: "type",
-  [SyntaxKind.EnumDeclaration]: "enum",
-  [SyntaxKind.ClassDeclaration]: "class",
+const SIMPLE_KIND_ROLE_MAP: Record<number, FileRole> = {
+  [SyntaxKind.InterfaceDeclaration]: "types",
+  [SyntaxKind.TypeAliasDeclaration]: "types",
+  [SyntaxKind.EnumDeclaration]: "constants",
+  [SyntaxKind.ClassDeclaration]: "model",
 };
 
 /**
@@ -37,11 +37,11 @@ export function classifyDeclaration(
   decl: MorphNode,
   name: string,
   _config: Config,
-): string {
+): FileRole {
   // 1. Function Declarations
   if (Node.isFunctionDeclaration(decl)) {
     if (/^use[A-Z]/.test(name)) return "hook";
-    return hasJSXDescendants(decl) ? "component" : "function";
+    return hasJSXDescendants(decl) ? "component" : "util";
   }
 
   // 2. Variable Declarations (Arrow functions, objects, constants)
@@ -57,14 +57,13 @@ export function classifyDeclaration(
 
       if (hasJSXDescendants(init)) return "component";
     }
-    return "variable";
+
+    return "util";
   }
 
   // 3. Static Structure Declarations
   const kind = decl.getKind();
-  if (SIMPLE_KIND_ROLE_MAP[kind]) {
-    return SIMPLE_KIND_ROLE_MAP[kind];
-  }
+  if (SIMPLE_KIND_ROLE_MAP[kind]) return SIMPLE_KIND_ROLE_MAP[kind];
 
   return "unknown";
 }

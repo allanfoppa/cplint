@@ -1,10 +1,12 @@
-import { Node, SyntaxKind } from "ts-morph";
 import type { Node as MorphNode, TypeChecker } from "ts-morph";
-import type { Config } from "../../../cplint/src/core/types/index.js";
-import { getDisplayName } from "../../../cplint/src/core/utils/get-display-name.js";
-import { pickPrimaryExport } from "../../../cplint/src/core/utils/pick-primary-export.js";
-import { describeCall } from "../../../cplint/src/core/utils/describe-call.js";
-import { isPrimitiveCall } from "../../../cplint/src/core/utils/is-primitive-call.js";
+import { Node, SyntaxKind } from "ts-morph";
+import type { Config } from "cplint";
+import {
+  getDisplayName,
+  pickPrimaryExport,
+  describeCall,
+  isPrimitiveCall,
+} from "cplint";
 
 export function extractCriticalFlow(
   exported: ReadonlyMap<string, MorphNode[]>,
