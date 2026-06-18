@@ -27,7 +27,6 @@ export function addTypeSummary(
 // ─── buildSummary ─────────────────────────────────────────────────────────────
 
 export function buildSummary(role: FileRole, apiSurface: any[]): string {
-  // Encontra a linha principal do export (ignora métodos internos indentados)
   const mainExport = (apiSurface || []).find(
     (row) => row && !row.name.startsWith("  "),
   );
@@ -104,7 +103,6 @@ export function buildSummary(role: FileRole, apiSurface: any[]): string {
 
   // ── Util ─────────────────────────────────────────────────────────────────
   if (role === "util") {
-    // Filtra todos os símbolos reais expostos na raiz do utilitário (evita quebras por variação de kind)
     const rootUtils = apiSurface.filter(
       (row) => row && !row.name.startsWith("  "),
     );

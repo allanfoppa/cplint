@@ -5,7 +5,6 @@ const MODELS = [
   { name: "Llama 3.1", window: 128000 },
 ];
 
-// Replaced at build time by the token counter generator
 const FILES = __INITIAL_DATA__;
 let warnThreshold = __WARN_THRESHOLD__;
 

@@ -8,7 +8,6 @@ import {
 
 /**
  * Infers the semantic role of a dependency module.
- * Separate from FileRole — this describes what the dep *does*, not what it *is*.
  */
 function inferDepRole(module: string): string {
   if (module.startsWith("@angular/core")) return "framework";
@@ -43,7 +42,6 @@ export function extractDeps(
 
     const module = imp.getModuleSpecifierValue();
 
-    // Skips standard framework boilerplate that the LLM already knows by config adapter
     if (module.startsWith("@angular/") || module.startsWith("rxjs")) {
       continue;
     }

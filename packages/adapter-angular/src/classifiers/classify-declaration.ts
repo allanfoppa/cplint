@@ -2,7 +2,7 @@ import { Node, SyntaxKind } from "ts-morph";
 import type { Node as MorphNode } from "ts-morph";
 import type { Config, FileRole } from "cplint";
 
-// ── Declarative Maps ─────────────────────────────────────────────────────────
+// ── Constants & Mappings ────────────────────────────────────────────────────
 const DIRECT_DECORATOR_MAP: Record<string, FileRole> = {
   Directive: "directive",
   Pipe: "pipe",
@@ -49,7 +49,6 @@ const SIMPLE_DECL_MAP: Record<number, FileRole> = {
   [SyntaxKind.EnumDeclaration]: "constants",
 };
 
-// ── Main Classifier ──────────────────────────────────────────────────────────
 export function classifyDeclaration(
   decl: MorphNode,
   name: string,

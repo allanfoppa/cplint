@@ -1,4 +1,3 @@
-// src/core/context-generator/utils/interleave-yaml.ts
 import YAML from "yaml";
 import type { ManualBlockKey, ManualDefaults } from "../types/index.js";
 

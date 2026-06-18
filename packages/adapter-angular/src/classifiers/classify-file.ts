@@ -32,7 +32,6 @@ const ANGULAR_SUFFIX_ROLE_MAP: Record<string, FileRole> = {
   config: "config",
 };
 
-// Structural matrix covering Clean, Hexagonal, Onion Architecture, and DDD
 const ARCHITECTURE_PATH_MAP: { segments: string[]; role: FileRole }[] = [
   {
     segments: [
@@ -87,7 +86,6 @@ const ARCHITECTURE_PATH_MAP: { segments: string[]; role: FileRole }[] = [
   },
 ];
 
-// ── Main classifier ──────────────────────────────────────────────────────────
 export function classifyAngularFile(file: SourceFile): FileRole {
   const filePath = file.getFilePath().toLowerCase();
   const base = file.getBaseNameWithoutExtension().toLowerCase();

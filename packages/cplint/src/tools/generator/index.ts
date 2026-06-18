@@ -163,12 +163,10 @@ export async function generate(
 
   const outputPath = getOutputPath(sourceFile.getFilePath(), config);
 
-  // Recupera o conteúdo antigo nativamente se ele já existir
   const existingYaml = fs.existsSync(outputPath)
     ? fs.readFileSync(outputPath, "utf8")
     : "";
 
-  // Renderiza o esqueleto automático injetando o conteúdo manual pré-existente
   const finalYaml = interleaveYaml(
     context,
     existingYaml,

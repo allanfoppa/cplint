@@ -41,7 +41,7 @@ export const noEmptyManualBlocks: LintRule = {
         if (policy.required) {
           violations.push({
             rule: "no-empty-manual-blocks",
-            severity: policy.severity,
+            severity: severity ?? policy.severity,
             file: file.path,
             block,
             message: `MANUAL block "${block}" is missing. It is mandatory for file context.`,

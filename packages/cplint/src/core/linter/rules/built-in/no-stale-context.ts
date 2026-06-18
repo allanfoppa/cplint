@@ -1,5 +1,5 @@
 import { statSync } from "node:fs";
-import { resolve, dirname } from "node:path";
+import { resolve } from "node:path";
 import type {
   LintFile,
   LintRule,

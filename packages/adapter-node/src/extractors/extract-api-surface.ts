@@ -20,8 +20,8 @@ const SIGNAL_STORE_FNS = new Set([
 
 export function extractApiSurface(
   exported: ReadonlyMap<string, ExportedDeclarations[]>,
-  checker: TypeChecker,
-  config: Config,
+  _checker: TypeChecker,
+  _config: Config,
 ): ApiSurfaceRow[] {
   const rows: ApiSurfaceRow[] = [];
 
@@ -33,7 +33,7 @@ export function extractApiSurface(
     const kind = classifyNodeFile(decl.getSourceFile());
 
     if (Node.isClassDeclaration(decl)) {
-      rows.push(...extractClassMembers(name, decl, kind, checker));
+      rows.push(...extractClassMembers(name, decl, kind));
       continue;
     }
 
@@ -43,7 +43,7 @@ export function extractApiSurface(
     }
 
     if (Node.isVariableDeclaration(decl)) {
-      rows.push(extractVariable(name, decl, kind, checker));
+      rows.push(extractVariable(name, decl, kind));
       continue;
     }
 
@@ -77,7 +77,6 @@ function extractClassMembers(
   className: string,
   cls: ClassDeclaration,
   kind: string,
-  checker: TypeChecker,
 ): ApiSurfaceRow[] {
   const rows: ApiSurfaceRow[] = [
     buildApiRow({ name: className, kind, type: className }),
@@ -125,7 +124,6 @@ function extractVariable(
   name: string,
   decl: VariableDeclaration,
   kind: string,
-  checker: TypeChecker,
 ): ApiSurfaceRow {
   const init = decl.getInitializer();
 

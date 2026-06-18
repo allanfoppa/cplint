@@ -25,7 +25,6 @@ export async function resolveAdapter(
   try {
     return await loader();
   } catch (error) {
-    // Elegant fallback error if the package is missing in the user's environment
     throw new Error(
       `The adapter "${adapter}" is missing.\n` +
         `Please ensure it is installed by running: pnpm add -D @cplint/adapter-${adapter.toLowerCase()}`,

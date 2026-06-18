@@ -36,7 +36,6 @@ export function extractChangeChecklist(
 
   const text = sourceFile.getFullText();
 
-  // React-specific warnings
   if (text.includes("useContext") || text.includes("createContext")) {
     checklist.push(
       "context shape changed — all consumers using this context will be affected",
