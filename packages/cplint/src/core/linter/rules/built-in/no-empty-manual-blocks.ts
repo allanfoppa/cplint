@@ -19,8 +19,12 @@ const BLOCK_POLICIES: Record<string, BlockPolicy> = {
   "open-questions": { severity: "warn", required: false },
 };
 
-function isBlank(value: string): boolean {
-  return !value || /^[\s\-]*$/.test(value.trim());
+const PLACEHOLDER_PREFIXES = ["Required.", "Optional."];
+
+function isBlankOrPlaceholder(value: string): boolean {
+  if (!value || /^[\s\-]*$/.test(value.trim())) return true;
+  const stripped = value.replace(/^-\s*/, "").trim();
+  return PLACEHOLDER_PREFIXES.some((p) => stripped.startsWith(p));
 }
 
 export const noEmptyManualBlocks: LintRule = {
@@ -33,9 +37,7 @@ export const noEmptyManualBlocks: LintRule = {
     for (const [block, policy] of Object.entries(BLOCK_POLICIES)) {
       const value = file.manualBlocks[block];
 
-      // Scenario: Not in context (undefined)
       if (value === undefined) {
-        // Not in context and required? warn/error
         if (policy.required) {
           violations.push({
             rule: "no-empty-manual-blocks",
@@ -45,13 +47,10 @@ export const noEmptyManualBlocks: LintRule = {
             message: `MANUAL block "${block}" is missing. It is mandatory for file context.`,
           });
         }
-        // Not in context and not required? ok (skip directly)
         continue;
       }
 
-      // Scenario: Is in context (value exists)
-      if (isBlank(value)) {
-        // Is in context and empty? warn/error
+      if (isBlankOrPlaceholder(value)) {
         violations.push({
           rule: "no-empty-manual-blocks",
           severity: policy.severity,
@@ -60,8 +59,6 @@ export const noEmptyManualBlocks: LintRule = {
           message: `MANUAL block "${block}" is empty. Fill it in or delete the key to save tokens if it doesn't apply.`,
         });
       }
-
-      // Is in context and filled? ok (falls through, continues the loop)
     }
 
     return violations;

@@ -8,9 +8,4 @@ export const lintCommand = new Command("lint")
     "Output format: stdout (default) or json",
     "stdout",
   )
-  .option(
-    "--strict-roles",
-    "Enable prefer-explicit-role rule: warn when role was inferred from export shape instead of filename suffix",
-    false,
-  )
   .action(async (options) => runLint(options));

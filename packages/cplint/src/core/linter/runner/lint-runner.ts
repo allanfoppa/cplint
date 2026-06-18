@@ -4,39 +4,56 @@ import YAML from "yaml";
 import type { LintFile, LintRule, LintViolation } from "../types.js";
 import { normalizePath } from "../../utils/normalize-path.js";
 
+const MANUAL_KEYS = new Set([
+  "purpose",
+  "decisions",
+  "constraints",
+  "known-pitfalls",
+  "not-in-scope",
+  "open-questions",
+]);
+
+const AUTO_KEYS = new Set([
+  "meta",
+  "summary",
+  "deps",
+  "change-checklist",
+  "entry-points",
+  "api-surface",
+  "state-shape",
+  "critical-flow",
+]);
+
 function parseContextFile(path: string, content: string): LintFile {
   const manualBlocks: Record<string, string> = {};
   const autoBlocks: Record<string, string> = {};
 
   try {
-    const parsed = YAML.parse(content) as {
-      auto?: Record<string, unknown>;
-      manual?: Record<string, unknown>;
-    };
+    const parsed = YAML.parse(content) as Record<string, unknown>;
+    if (!parsed) return { path, content, manualBlocks, autoBlocks };
 
-    if (parsed && typeof parsed.auto === "object") {
-      for (const [key, value] of Object.entries(parsed.auto)) {
-        autoBlocks[key] =
+    const global_ = parsed.global as Record<string, unknown> | undefined;
+
+    if (global_ && typeof global_ === "object") {
+      for (const [key, value] of Object.entries(global_)) {
+        const serialized =
           typeof value === "object"
             ? YAML.stringify(value).trim()
             : String(value ?? "");
-      }
-    }
 
-    if (parsed && typeof parsed.manual === "object") {
-      for (const [key, value] of Object.entries(parsed.manual)) {
-        if (value === null || value === undefined) {
-          manualBlocks[key] = "-";
-        } else if (
-          Array.isArray(value) &&
-          (value.length === 0 || value[0] === null)
-        ) {
-          manualBlocks[key] = "-";
-        } else {
-          manualBlocks[key] =
-            typeof value === "object"
-              ? YAML.stringify(value).trim()
-              : String(value);
+        if (MANUAL_KEYS.has(key)) {
+          if (value === null || value === undefined) {
+            manualBlocks[key] = "-";
+          } else if (
+            Array.isArray(value) &&
+            (value.length === 0 || value[0] === null)
+          ) {
+            manualBlocks[key] = "-";
+          } else {
+            manualBlocks[key] = serialized;
+          }
+        } else if (AUTO_KEYS.has(key)) {
+          autoBlocks[key] = serialized;
         }
       }
     }
@@ -59,9 +76,7 @@ export type LintRunnerOptions = {
 
 export function runLintRunner(options: LintRunnerOptions): LintViolation[] {
   const pattern = `${normalizePath(options.rootPath)}/**/*.cplint.yaml`;
-
   const files = fg.sync(pattern, { ignore: options.exclude });
-
   const allViolations: LintViolation[] = [];
 
   for (const filePath of files) {
