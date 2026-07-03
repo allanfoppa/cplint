@@ -8,7 +8,7 @@
     "lint:exports": "pnpm -r --parallel exec publint",
     "lint:deps": "dependency-cruiser --config .dependency-cruiser.cjs packages",
     "buildTokenTemplate": "node scripts/compile-templates.js",
-    "build": "pnpm typecheck && pnpm lint:exports && pnpm lint:deps && pnpm buildTokenTemplate && pnpm --filter \"@cplint/adapter-*\" run build && pnpm --filter cplint run build"
+    "build": "pnpm --filter \"@cplint/adapter-*\" run build && pnpm --filter cplint run build && pnpm typecheck && pnpm lint:exports && pnpm lint:deps && pnpm buildTokenTemplate"
   },
   "engines": {
     "node": ">=18.0.0",
