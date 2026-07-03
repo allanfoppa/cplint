@@ -5,8 +5,14 @@
   "description": "AST-based semantic linting and context optimization tooling for AI-assisted development.",
   "main": "./dist/index.js",
   "exports": {
-    ".": "./dist/index.js",
-    "./cli": "./dist/main.js"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./cli": {
+      "types": "./dist/main.d.ts",
+      "default": "./dist/main.js"
+    }
   },
   "keywords": [
     "ast",
