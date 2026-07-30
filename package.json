@@ -3,12 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "packageManager": "pnpm@11.0.9",
+  "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint:exports": "pnpm -r --parallel exec publint",
     "lint:deps": "dependency-cruiser --config .dependency-cruiser.cjs packages",
     "buildTokenTemplate": "node scripts/compile-templates.js",
-    "build": "pnpm --filter \"@cplint/adapter-*\" run build && pnpm --filter cplint run build && pnpm typecheck && pnpm lint:exports && pnpm lint:deps && pnpm buildTokenTemplate"
+    "build": "pnpm --filter cplint run build && pnpm --filter \"@cplint/adapter-*\" run build && pnpm typecheck && pnpm lint:exports && pnpm lint:deps && pnpm buildTokenTemplate"
   },
   "engines": {
     "node": ">=18.0.0",
