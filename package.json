@@ -1,9 +1,10 @@
 {
-  "name": "cplint-monorepo",
+  "name": "@cplint/monorepo",
   "version": "0.1.0",
   "private": true,
   "packageManager": "pnpm@11.0.9",
   "type": "module",
+  
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint:exports": "pnpm -r --parallel exec publint",

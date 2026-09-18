@@ -10,10 +10,10 @@ const srcDir = resolve(rootDir, "packages/cplint/src/core/analyze/report");
 const distDir = resolve(rootDir, "packages/cplint/dist");
 
 try {
-  // 1. Garantir que a pasta de destino exista no dist
+  // 1. Make sure the dist directory exists
   mkdirSync(distDir, { recursive: true });
 
-  // 2. Ler os arquivos originais da src
+  // 2. Read the original files from src
   const htmlTemplate = readFileSync(
     resolve(srcDir, "report-template.html"),
     "utf-8",
@@ -21,7 +21,7 @@ try {
   const rawStyles = readFileSync(resolve(srcDir, "report-styles.css"), "utf-8");
   const rawScript = readFileSync(resolve(srcDir, "report-script.js"), "utf-8");
 
-  // 3. Unificar os assets injetando CSS e JS nas tags correspondentes
+  // 3. Combine the HTML, CSS, and JS into a single file
   const htmlWithStyles = htmlTemplate.replace(
     "",
     `<style>${rawStyles}</style>`,
@@ -32,7 +32,7 @@ try {
     `<script>${rawScript}</script>`,
   );
 
-  // 4. Salvar o arquivo final unificado na dist
+  // 4. Save the final file in dist
   writeFileSync(
     resolve(distDir, "report-template.html"),
     singleFileTemplate,
